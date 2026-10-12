@@ -28,6 +28,7 @@ build/
 
 # Reports and receipts (generated at runtime)
 reports/*.csv
+reports/*.pdf
 receipts/*.pdf
 receipts/*.txt
 
