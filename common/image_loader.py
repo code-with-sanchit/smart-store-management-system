@@ -1,51 +1,81 @@
-import os
-from PIL import Image, ImageDraw, ImageTk
+"""Local product-photo loading for the customer catalogue."""
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSETS_DIR = os.path.join(BASE_DIR, "assets", "products")
-os.makedirs(ASSETS_DIR, exist_ok=True)
+from __future__ import annotations
 
-_TK_IMAGE_CACHE = {}
+import hashlib
+import re
+from pathlib import Path
+
+from PIL import Image, ImageDraw, ImageOps, ImageTk
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = BASE_DIR / "assets" / "products"
+ITEMS_DIR = ASSETS_DIR / "items"
+CATALOG_DIR = ASSETS_DIR / "catalog"
+for directory in (ASSETS_DIR, ITEMS_DIR, CATALOG_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+
+_TK_IMAGE_CACHE: dict[tuple[int, tuple[int, int]], ImageTk.PhotoImage] = {}
+_IMAGE_EXTENSIONS = (".webp", ".png", ".jpg", ".jpeg")
 
 
-def get_product_image(item_id, item_name, category, size=(210, 110)):
+def product_image_key(item_name: str) -> str:
+    """Make a stable filename key without conflating different products."""
+    normalized = re.sub(r"[^a-z0-9]+", "-", item_name.lower()).strip("-")
+    digest = hashlib.sha1(item_name.encode("utf-8")).hexdigest()[:10]
+    return f"{normalized[:90]}-{digest}"
+
+
+def _find_image(item_id: int, item_name: str, category: str = "") -> Path | None:
+    """Return an item photo, then an exact-name catalogue photo, then category photo if available."""
+    for directory, stem in ((ITEMS_DIR, str(item_id)), (CATALOG_DIR, product_image_key(item_name))):
+        for extension in _IMAGE_EXTENSIONS:
+            candidate = directory / f"{stem}{extension}"
+            if candidate.is_file():
+                return candidate
+
+    if category:
+        cat_slug = category.lower().replace("&", "and").replace(",", "").replace(" ", "_").strip()
+        cat_file = ASSETS_DIR / f"{cat_slug}.png"
+        if cat_file.is_file():
+            return cat_file
+
+    return None
+
+
+def _unavailable_photo(size: tuple[int, int]) -> ImageTk.PhotoImage:
+    """Use an honest unavailable state if no photo exists."""
+    image = Image.new("RGBA", size, "#f8fafc")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, size[0] - 1, size[1] - 1), outline="#cbd5e1", width=1)
+    draw.text((16, max(12, size[1] // 2 - 8)), "Product photo unavailable", fill="#64748b")
+    return ImageTk.PhotoImage(image)
+
+
+def get_product_image(item_id: int, item_name: str, category: str, size: tuple[int, int] = (210, 110)):
+    """Return the photo for a product, sized for a Tk card.
+
+    Checks item-specific photo first, then exact catalog photo, then
+    category department photo, and falls back to a clean placeholder.
     """
-    Returns a high-quality Tkinter PhotoImage for any product using real downloaded web photography.
-    Caches resized images in memory for high-performance fluid rendering.
-    """
-    # Check memory cache first
-    slug = category.lower().replace(" ", "_").replace("&", "and").replace(",", "").strip()
-    cache_key = f"{slug}_{size[0]}x{size[1]}"
+    cache_key = (int(item_id), size)
     if cache_key in _TK_IMAGE_CACHE:
         return _TK_IMAGE_CACHE[cache_key]
 
-    # Check for item-specific photo first
-    item_file = os.path.join(ASSETS_DIR, f"{item_id}.png")
-    cat_file = os.path.join(ASSETS_DIR, f"{slug}.png")
-
-    target_file = item_file if os.path.exists(item_file) else cat_file
-
-    if os.path.exists(target_file):
+    target_file = _find_image(int(item_id), item_name, category)
+    if target_file:
         try:
-            pil_img = Image.open(target_file).convert("RGBA")
-            pil_img = pil_img.resize(size, Image.Resampling.LANCZOS)
+            with Image.open(target_file) as source:
+                image = ImageOps.contain(source.convert("RGBA"), size, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", size, "#ffffff")
+            canvas.alpha_composite(image, ((size[0] - image.width) // 2, (size[1] - image.height) // 2))
+            ImageDraw.Draw(canvas).rectangle((0, 0, size[0] - 1, size[1] - 1), outline="#e2e8f0", width=1)
+            photo = ImageTk.PhotoImage(canvas)
+            _TK_IMAGE_CACHE[cache_key] = photo
+            return photo
+        except (OSError, ValueError) as error:
+            print(f"Could not render product image {target_file}: {error}")
 
-            # Add subtle elegant card border to frame the product photograph
-            draw = ImageDraw.Draw(pil_img)
-            draw.rectangle([0, 0, size[0] - 1, size[1] - 1], outline="#e2e8f0", width=1)
-
-            tk_photo = ImageTk.PhotoImage(pil_img)
-            _TK_IMAGE_CACHE[cache_key] = tk_photo
-            return tk_photo
-        except Exception as e:
-            print(f"Error rendering photo for category {slug}: {e}")
-
-    # Fallback modern placeholder if image file not found
-    pil_img = Image.new("RGBA", size, color="#f8fafc")
-    draw = ImageDraw.Draw(pil_img)
-    draw.rectangle([0, 0, size[0] - 1, size[1] - 1], outline="#cbd5e1", width=1)
-    draw.text((15, 45), category[:24], fill="#475569")
-
-    tk_photo = ImageTk.PhotoImage(pil_img)
-    _TK_IMAGE_CACHE[cache_key] = tk_photo
-    return tk_photo
+    photo = _unavailable_photo(size)
+    _TK_IMAGE_CACHE[cache_key] = photo
+    return photo
