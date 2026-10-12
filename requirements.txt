@@ -5,3 +5,4 @@ matplotlib>=3.7.0
 pillow 
 reportlab 
 qrcode 
+requests>=2.31.0
