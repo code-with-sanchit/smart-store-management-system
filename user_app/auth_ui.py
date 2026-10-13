@@ -1,6 +1,14 @@
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from common.auth import register_customer, login_customer
+from common.logo_utils import get_logo_image, set_window_icon
 
 
 class AuthDialog(tk.Toplevel):
@@ -8,9 +16,12 @@ class AuthDialog(tk.Toplevel):
         super().__init__(parent)
 
         self.title("SnapKart - Customer Account")
-        self.geometry("420x520")
+        self.geometry("420x550")
         self.resizable(False, False)
         self.configure(bg="#ffffff")
+
+        # Set official window icon
+        set_window_icon(self)
 
         # Keep window in front
         self.transient(parent)
@@ -25,16 +36,23 @@ class AuthDialog(tk.Toplevel):
 
     def create_header(self):
         header = tk.Frame(self, bg="#ffffff")
-        header.pack(fill=tk.X, padx=30, pady=(25, 10))
+        header.pack(fill=tk.X, padx=30, pady=(20, 8))
+
+        brand_row = tk.Frame(header, bg="#ffffff")
+        brand_row.pack(anchor="w", pady=(0, 4))
+
+        self.auth_logo = get_logo_image(with_text=False, size=(36, 36))
+        if self.auth_logo:
+            tk.Label(brand_row, image=self.auth_logo, bg="#ffffff").pack(side=tk.LEFT, padx=(0, 8))
 
         self.lbl_title = tk.Label(
-            header,
+            brand_row,
             text="Welcome to SnapKart",
-            font=("Segoe UI", 16, "bold"),
+            font=("Segoe UI", 15, "bold"),
             fg="#0f172a",
             bg="#ffffff"
         )
-        self.lbl_title.pack(anchor="w")
+        self.lbl_title.pack(side=tk.LEFT)
 
         self.lbl_subtitle = tk.Label(
             header,

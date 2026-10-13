@@ -1,7 +1,15 @@
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from database.db_connection import get_db_connection
 from common.store_status import check_store_status
+from common.logo_utils import get_logo_image
 
 
 class StoreSettingsFrame(ttk.Frame):
@@ -21,14 +29,23 @@ class StoreSettingsFrame(ttk.Frame):
         header_frame = tk.Frame(self, bg="#1e293b", height=60)
         header_frame.pack(fill=tk.X, pady=(0, 15))
 
+        left_box = tk.Frame(header_frame, bg="#1e293b")
+        left_box.pack(side=tk.LEFT, padx=15, pady=12)
+
+        self.hdr_logo = get_logo_image(with_text=False, size=(30, 30))
+        if self.hdr_logo:
+            lbl_ico = tk.Label(left_box, image=self.hdr_logo, bg="#1e293b")
+            lbl_ico.image = self.hdr_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 8))
+
         title_lbl = tk.Label(
-            header_frame, 
+            left_box, 
             text="Store Business Hours & Operational Control", 
             font=("Segoe UI", 14, "bold"), 
             bg="#1e293b", 
             fg="#ffffff"
         )
-        title_lbl.pack(side=tk.LEFT, padx=15, pady=12)
+        title_lbl.pack(side=tk.LEFT)
 
     def create_status_banner(self):
         self.banner_frame = tk.Frame(self, bg="#f1f5f9", relief=tk.RIDGE, bd=1)

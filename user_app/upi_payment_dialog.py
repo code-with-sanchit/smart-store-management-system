@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 
+from common.logo_utils import get_logo_image, set_window_icon
+
 try:
     import qrcode
     HAS_QRCODE = True
@@ -18,6 +20,9 @@ class UPIPaymentDialog(tk.Toplevel):
         self.resizable(False, False)
         self.configure(bg="#ffffff")
 
+        # Set official window icon
+        set_window_icon(self)
+
         # Keep on top of main window
         self.transient(parent)
         self.grab_set()
@@ -31,21 +36,28 @@ class UPIPaymentDialog(tk.Toplevel):
 
     def create_ui(self):
         # Header Banner
-        header = tk.Frame(self, bg="#16a34a", height=70)
+        header = tk.Frame(self, bg="#16a34a", height=74)
         header.pack(fill=tk.X)
         header.pack_propagate(False)
 
+        top_title_row = tk.Frame(header, bg="#16a34a")
+        top_title_row.pack(pady=(10, 2))
+
+        self.upi_logo = get_logo_image(with_text=False, size=(30, 30))
+        if self.upi_logo:
+            tk.Label(top_title_row, image=self.upi_logo, bg="#16a34a").pack(side=tk.LEFT, padx=(0, 6))
+
         tk.Label(
-            header,
-            text="📱 Pay via UPI",
-            font=("Segoe UI", 15, "bold"),
+            top_title_row,
+            text="SnapKart UPI Payment",
+            font=("Segoe UI", 14, "bold"),
             fg="#ffffff",
             bg="#16a34a"
-        ).pack(pady=(12, 2))
+        ).pack(side=tk.LEFT)
 
         tk.Label(
             header,
-            text="Scan QR code or enter your UPI ID",
+            text="Scan QR code or enter your UPI Virtual Payment Address",
             font=("Segoe UI", 8),
             fg="#dcfce7",
             bg="#16a34a"

@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+import warnings
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
@@ -6,7 +9,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
+
 from database.db_connection import get_db_connection
+from common.logo_utils import get_logo_image
 
 
 class AnalyticsFrame(ttk.Frame):
@@ -21,17 +32,26 @@ class AnalyticsFrame(ttk.Frame):
         self.load_analytics_data()
 
     def create_header(self):
-        header_frame = tk.Frame(self, bg="#0f172a", height=50)
+        header_frame = tk.Frame(self, bg="#0f172a", height=52)
         header_frame.pack(fill=tk.X, pady=(0, 10))
 
+        left_box = tk.Frame(header_frame, bg="#0f172a")
+        left_box.pack(side=tk.LEFT, padx=15, pady=8)
+
+        self.hdr_logo = get_logo_image(with_text=False, size=(30, 30))
+        if self.hdr_logo:
+            lbl_ico = tk.Label(left_box, image=self.hdr_logo, bg="#0f172a")
+            lbl_ico.image = self.hdr_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 8))
+
         title = tk.Label(
-            header_frame,
+            left_box,
             text="SnapKart Business Intelligence & Inventory Analytics",
             font=("Segoe UI", 13, "bold"),
             bg="#0f172a",
             fg="white"
         )
-        title.pack(side=tk.LEFT, padx=15, pady=10)
+        title.pack(side=tk.LEFT)
 
         refresh_btn = tk.Button(
             header_frame,

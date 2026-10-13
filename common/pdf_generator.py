@@ -11,11 +11,14 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
-    HRFlowable
+    HRFlowable,
+    Image as RLImage
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.barcode import qr
+
+from common.logo_utils import get_logo_path
 
 
 def generate_pdf_receipt(
@@ -53,7 +56,7 @@ def generate_pdf_receipt(
         "BrandTitle",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=22,
+        fontSize=20,
         textColor=colors.HexColor("#16a34a"),
         alignment=0,
         spaceAfter=2
@@ -87,31 +90,67 @@ def generate_pdf_receipt(
         alignment=1
     )
 
-    # 1. Header: Store Branding & Tax Info
-    header_data = [
-        [
-            Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", brand_title_style),
-            Paragraph(
-                "<b>SnapKart Flagship Superstore</b><br/>"
-                "Plot No. 45, Commercial Complex<br/>"
-                "<b>GSTIN:</b> 09AAACS1429B1Z8 | <b>FSSAI:</b> 12722001000456",
-                store_addr_style
-            )
-        ],
-        [
-            Paragraph("Your Neighbourhood Store, Online", brand_sub_style),
-            ""
-        ]
-    ]
+    # 1. Header: Store Branding with Official Logo & Tax Info
+    logo_path = str(get_logo_path(with_text=True))
+    logo_element = None
+    if os.path.isfile(logo_path):
+        try:
+            logo_element = RLImage(logo_path, width=70, height=70)
+        except Exception as e:
+            print(f"Notice: Could not load logo in PDF: {e}")
 
-    header_table = Table(header_data, colWidths=[270, 270])
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
+    if logo_element is not None:
+        header_data = [
+            [
+                logo_element,
+                [
+                    Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", brand_title_style),
+                    Spacer(1, 2),
+                    Paragraph("Your Neighbourhood Store, Online", brand_sub_style)
+                ],
+                Paragraph(
+                    "<b>SnapKart Flagship Superstore</b><br/>"
+                    "Plot No. 45, Commercial Complex<br/>"
+                    "<b>GSTIN:</b> 09AAACS1429B1Z8<br/>"
+                    "<b>FSSAI:</b> 12722001000456",
+                    store_addr_style
+                )
+            ]
+        ]
+        header_table = Table(header_data, colWidths=[75, 235, 230])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+    else:
+        header_data = [
+            [
+                Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", brand_title_style),
+                Paragraph(
+                    "<b>SnapKart Flagship Superstore</b><br/>"
+                    "Plot No. 45, Commercial Complex<br/>"
+                    "<b>GSTIN:</b> 09AAACS1429B1Z8 | <b>FSSAI:</b> 12722001000456",
+                    store_addr_style
+                )
+            ],
+            [
+                Paragraph("Your Neighbourhood Store, Online", brand_sub_style),
+                ""
+            ]
+        ]
+        header_table = Table(header_data, colWidths=[270, 270])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+
     story.append(header_table)
+    story.append(Spacer(1, 4))
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#16a34a"), spaceAfter=10))
 
     # 2. Tax Invoice Title Box

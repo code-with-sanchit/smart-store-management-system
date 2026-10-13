@@ -1,8 +1,15 @@
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
+from common.logo_utils import get_logo_image
 
 
 class TransactionsFrame(ttk.Frame):
@@ -12,6 +19,28 @@ class TransactionsFrame(ttk.Frame):
 
         self.selected_sale_id = None
         self.selected_sale_meta = {}
+
+        # Top Header Bar
+        top_bar = tk.Frame(self, bg="#0f172a", height=46)
+        top_bar.pack(fill=tk.X, pady=(0, 8))
+        top_bar.pack_propagate(False)
+
+        brand_row = tk.Frame(top_bar, bg="#0f172a")
+        brand_row.pack(side=tk.LEFT, padx=12, pady=6)
+
+        self.tx_logo = get_logo_image(with_text=False, size=(28, 28))
+        if self.tx_logo:
+            lbl_ico = tk.Label(brand_row, image=self.tx_logo, bg="#0f172a")
+            lbl_ico.image = self.tx_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 6))
+
+        tk.Label(
+            brand_row,
+            text="SnapKart Invoices & Sales Records",
+            font=("Segoe UI", 12, "bold"),
+            fg="#38bdf8",
+            bg="#0f172a"
+        ).pack(side=tk.LEFT)
 
         self.create_top_search_bar()
         self.create_split_layout()
@@ -67,26 +96,7 @@ class TransactionsFrame(ttk.Frame):
         right_frame = ttk.LabelFrame(paned, text="Invoice Items & Actions")
         paned.add(right_frame, weight=2)
 
-        item_cols = ("name", "qty", "price", "subtotal")
-        self.items_tree = ttk.Treeview(right_frame, columns=item_cols, show="headings", selectmode="browse")
-
-        self.items_tree.heading("name", text="Product")
-        self.items_tree.heading("qty", text="Qty")
-        self.items_tree.heading("price", text="Price")
-        self.items_tree.heading("subtotal", text="Subtotal")
-
-        self.items_tree.column("name", width=140, anchor="w")
-        self.items_tree.column("qty", width=45, anchor="center")
-        self.items_tree.column("price", width=60, anchor="e")
-        self.items_tree.column("subtotal", width=70, anchor="e")
-
-        items_scroll = ttk.Scrollbar(right_frame, orient="vertical", command=self.items_tree.yview)
-        self.items_tree.configure(yscrollcommand=items_scroll.set)
-
-        self.items_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        items_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Reprint PDF Button
+        # Reprint PDF Button (anchored at bottom)
         btn_box = tk.Frame(right_frame, bg="#ffffff")
         btn_box.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
 
@@ -101,6 +111,29 @@ class TransactionsFrame(ttk.Frame):
             command=self.reprint_pdf_receipt
         )
         self.btn_reprint_pdf.pack(fill=tk.X, ipady=6)
+
+        # Table container frame
+        items_table_frame = ttk.Frame(right_frame)
+        items_table_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        item_cols = ("name", "qty", "price", "subtotal")
+        self.items_tree = ttk.Treeview(items_table_frame, columns=item_cols, show="headings", selectmode="browse")
+
+        self.items_tree.heading("name", text="Product")
+        self.items_tree.heading("qty", text="Qty")
+        self.items_tree.heading("price", text="Price")
+        self.items_tree.heading("subtotal", text="Subtotal")
+
+        self.items_tree.column("name", width=140, anchor="w")
+        self.items_tree.column("qty", width=45, anchor="center")
+        self.items_tree.column("price", width=60, anchor="e")
+        self.items_tree.column("subtotal", width=70, anchor="e")
+
+        items_scroll = ttk.Scrollbar(items_table_frame, orient="vertical", command=self.items_tree.yview)
+        self.items_tree.configure(yscrollcommand=items_scroll.set)
+
+        self.items_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        items_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
     # 3. Load Sales from MySQL
     def load_all_transactions(self):

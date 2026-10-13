@@ -1,11 +1,17 @@
 import os
 import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
+from common.logo_utils import get_logo_image
 
 
 class BillingPOSFrame(ttk.Frame):
@@ -26,17 +32,26 @@ class BillingPOSFrame(ttk.Frame):
 
     def create_ui(self):
         # 1. Header Terminal Info
-        header = tk.Frame(self, bg="#0f172a", height=50)
+        header = tk.Frame(self, bg="#0f172a", height=52)
         header.pack(fill=tk.X, pady=(0, 10))
         header.pack_propagate(False)
 
+        left_brand = tk.Frame(header, bg="#0f172a")
+        left_brand.pack(side=tk.LEFT, padx=15)
+
+        self.pos_logo = get_logo_image(with_text=False, size=(30, 30))
+        if self.pos_logo:
+            lbl_ico = tk.Label(left_brand, image=self.pos_logo, bg="#0f172a")
+            lbl_ico.image = self.pos_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 8))
+
         tk.Label(
-            header,
-            text="🛒 SnapKart POS - Billing & Checkout Terminal",
+            left_brand,
+            text="SnapKart POS - Billing & Checkout Terminal",
             font=("Segoe UI", 13, "bold"),
             fg="#38bdf8",
             bg="#0f172a"
-        ).pack(side=tk.LEFT, padx=15)
+        ).pack(side=tk.LEFT)
 
         self.lbl_time = tk.Label(
             header,
@@ -68,27 +83,7 @@ class BillingPOSFrame(ttk.Frame):
 
         ttk.Button(search_box, text="Clear", command=self.clear_search).pack(side=tk.RIGHT)
 
-        # Catalog Table
-        cols = ("id", "name", "category", "price", "stock")
-        self.catalog_tree = ttk.Treeview(left_panel, columns=cols, show="headings", height=14, selectmode="browse")
-        self.catalog_tree.heading("id", text="ID")
-        self.catalog_tree.heading("name", text="Product Name")
-        self.catalog_tree.heading("category", text="Department")
-        self.catalog_tree.heading("price", text="Price (₹)")
-        self.catalog_tree.heading("stock", text="In Stock")
-
-        self.catalog_tree.column("id", width=55, anchor=tk.CENTER)
-        self.catalog_tree.column("name", width=220, anchor=tk.W)
-        self.catalog_tree.column("category", width=140, anchor=tk.W)
-        self.catalog_tree.column("price", width=75, anchor=tk.E)
-        self.catalog_tree.column("stock", width=65, anchor=tk.CENTER)
-
-        c_scroll = ttk.Scrollbar(left_panel, orient=tk.VERTICAL, command=self.catalog_tree.yview)
-        self.catalog_tree.configure(yscrollcommand=c_scroll.set)
-        self.catalog_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 0), pady=6)
-        c_scroll.pack(side=tk.LEFT, fill=tk.Y, pady=6)
-
-        # Quick Add controls under catalog
+        # Quick Add controls under catalog (anchored at bottom)
         add_ctrl = tk.Frame(left_panel)
         add_ctrl.pack(fill=tk.X, side=tk.BOTTOM, padx=8, pady=8)
 
@@ -110,6 +105,29 @@ class BillingPOSFrame(ttk.Frame):
             command=self.add_selected_to_bill
         )
         btn_add.pack(side=tk.LEFT)
+
+        # Catalog Table Container Frame
+        cat_frame = ttk.Frame(left_panel)
+        cat_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 4))
+
+        cols = ("id", "name", "category", "price", "stock")
+        self.catalog_tree = ttk.Treeview(cat_frame, columns=cols, show="headings", height=14, selectmode="browse")
+        self.catalog_tree.heading("id", text="ID")
+        self.catalog_tree.heading("name", text="Product Name")
+        self.catalog_tree.heading("category", text="Department")
+        self.catalog_tree.heading("price", text="Price (₹)")
+        self.catalog_tree.heading("stock", text="In Stock")
+
+        self.catalog_tree.column("id", width=55, anchor=tk.CENTER)
+        self.catalog_tree.column("name", width=220, anchor=tk.W)
+        self.catalog_tree.column("category", width=140, anchor=tk.W)
+        self.catalog_tree.column("price", width=75, anchor=tk.E)
+        self.catalog_tree.column("stock", width=65, anchor=tk.CENTER)
+
+        c_scroll = ttk.Scrollbar(cat_frame, orient=tk.VERTICAL, command=self.catalog_tree.yview)
+        self.catalog_tree.configure(yscrollcommand=c_scroll.set)
+        self.catalog_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        c_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.catalog_tree.bind("<Double-1>", lambda e: self.add_selected_to_bill())
 
@@ -133,9 +151,12 @@ class BillingPOSFrame(ttk.Frame):
         self.entry_cust_phone.insert(0, "+91 ")
         self.entry_cust_phone.pack(side=tk.LEFT, padx=5)
 
-        # Active Bill Items Treeview
+        # Active Bill Items Treeview Container Frame
+        bill_frame = ttk.Frame(right_panel)
+        bill_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 0))
+
         bill_cols = ("id", "name", "price", "qty", "total")
-        self.bill_tree = ttk.Treeview(right_panel, columns=bill_cols, show="headings", height=8, selectmode="browse")
+        self.bill_tree = ttk.Treeview(bill_frame, columns=bill_cols, show="headings", height=8, selectmode="browse")
         self.bill_tree.heading("id", text="ID")
         self.bill_tree.heading("name", text="Item")
         self.bill_tree.heading("price", text="Price (₹)")
@@ -148,9 +169,9 @@ class BillingPOSFrame(ttk.Frame):
         self.bill_tree.column("qty", width=50, anchor=tk.CENTER)
         self.bill_tree.column("total", width=75, anchor=tk.E)
 
-        b_scroll = ttk.Scrollbar(right_panel, orient=tk.VERTICAL, command=self.bill_tree.yview)
+        b_scroll = ttk.Scrollbar(bill_frame, orient=tk.VERTICAL, command=self.bill_tree.yview)
         self.bill_tree.configure(yscrollcommand=b_scroll.set)
-        self.bill_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 0))
+        self.bill_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         b_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Item Modifier Buttons (+ / - / Remove)
@@ -388,14 +409,15 @@ class BillingPOSFrame(ttk.Frame):
 
             # 2. Insert items into sale_items and update inventory stock
             for item_id, item in self.bill_items.items():
+                item_subtotal = round(float(item["qty"]) * float(item["price"]), 2)
                 cursor.execute("""
-                    INSERT INTO sale_items (sale_id, item_id, quantity, unit_price)
-                    VALUES (%s, %s, %s, %s);
-                """, (sale_id, item_id, item["qty"], item["price"]))
+                    INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal)
+                    VALUES (%s, %s, %s, %s, %s);
+                """, (sale_id, item_id, item["qty"], item["price"], item_subtotal))
 
                 cursor.execute("""
                     UPDATE inventory
-                    SET stock_quantity = stock_quantity - %s
+                    SET stock_quantity = GREATEST(stock_quantity - %s, 0)
                     WHERE item_id = %s;
                 """, (item["qty"], item_id))
 

@@ -1,8 +1,16 @@
+import os
 import subprocess
 import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from common.store_status import check_store_status
+from common.logo_utils import get_logo_image, set_window_icon
 
 
 class SnapKartLauncher(tk.Tk):
@@ -14,21 +22,31 @@ class SnapKartLauncher(tk.Tk):
         self.resizable(False, False)
         self.configure(bg="#0f172a")
 
+        # Set window icon to official logo
+        set_window_icon(self)
+
         self.create_ui()
         self.update_live_badge()
 
     def create_ui(self):
         # 1. Header & Branding
         header_frame = tk.Frame(self, bg="#0f172a")
-        header_frame.pack(fill=tk.X, pady=(35, 10))
+        header_frame.pack(fill=tk.X, pady=(25, 8))
+
+        brand_row = tk.Frame(header_frame, bg="#0f172a")
+        brand_row.pack()
+
+        self.logo_img = get_logo_image(with_text=False, size=(48, 48))
+        if self.logo_img:
+            tk.Label(brand_row, image=self.logo_img, bg="#0f172a").pack(side=tk.LEFT, padx=(0, 10))
 
         tk.Label(
-            header_frame,
-            text="🛒 SnapKart",
-            font=("Segoe UI", 24, "bold"),
+            brand_row,
+            text="SnapKart",
+            font=("Segoe UI", 25, "bold"),
             fg="#38bdf8",
             bg="#0f172a"
-        ).pack()
+        ).pack(side=tk.LEFT)
 
         tk.Label(
             header_frame,
@@ -76,12 +94,12 @@ class SnapKartLauncher(tk.Tk):
             command=self.open_admin_app
         )
 
-        # Button 3: Generate CSV Reports
+        # Button 3: Generate Business & PDF Reports
         self.create_launch_button(
             parent=card_container,
             icon="📈",
-            title="Generate Business Reports (CSV)",
-            subtitle="Export daily sales breakdown & restock alert spreadsheets",
+            title="Generate Business & PDF Reports",
+            subtitle="Export executive branded PDF report & analytical spreadsheets",
             btn_color="#7c3aed",
             command=self.run_reports_script
         )
@@ -157,12 +175,20 @@ class SnapKartLauncher(tk.Tk):
 
     def run_reports_script(self):
         from data_analysis.sales_report import generate_sales_and_inventory_reports
+        from common.pdf_generator import open_pdf_file
         try:
-            generate_sales_and_inventory_reports()
-            messagebox.showinfo(
-                "Reports Generated",
-                "Successfully exported CSV reports to the 'reports/' folder!"
-            )
+            pdf_path = generate_sales_and_inventory_reports()
+            if pdf_path and os.path.isfile(pdf_path):
+                if messagebox.askyesno(
+                    "Executive Reports Ready",
+                    f"Official SnapKart Business Reports generated successfully!\n\n"
+                    f"• Executive Branded PDF: {os.path.basename(pdf_path)}\n"
+                    f"• CSV Spreadsheets in 'reports/' folder\n\n"
+                    f"Open official PDF report now?"
+                ):
+                    open_pdf_file(pdf_path)
+            else:
+                messagebox.showinfo("Reports Generated", "Successfully exported reports to the 'reports/' folder!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to generate reports: {e}")
 

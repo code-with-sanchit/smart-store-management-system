@@ -1,7 +1,15 @@
+import sys
+from pathlib import Path
 import math
 import tkinter as tk
 from tkinter import ttk, messagebox
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from database.db_connection import get_db_connection
+from common.logo_utils import get_logo_image
 
 
 class InventoryFrame(ttk.Frame):
@@ -26,6 +34,34 @@ class InventoryFrame(ttk.Frame):
         self.load_inventory()
 
     def create_widgets(self):
+        # 0. Top Branding Header
+        top_bar = tk.Frame(self, bg="#0f172a", height=46)
+        top_bar.pack(fill=tk.X, pady=(0, 8))
+        top_bar.pack_propagate(False)
+
+        brand_row = tk.Frame(top_bar, bg="#0f172a")
+        brand_row.pack(side=tk.LEFT, padx=12, pady=6)
+
+        self.inv_logo = get_logo_image(with_text=False, size=(28, 28))
+        if self.inv_logo:
+            lbl_ico = tk.Label(brand_row, image=self.inv_logo, bg="#0f172a")
+            lbl_ico.image = self.inv_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 6))
+
+        title_text = {
+            "low_stock": "SnapKart Low Stock Restock Alerts",
+            "stock_mgmt": "SnapKart Stock Levels & Inventory Adjustment",
+            "all": "SnapKart Product Catalog Management"
+        }.get(self.filter_mode, "SnapKart Inventory Control")
+
+        tk.Label(
+            brand_row,
+            text=title_text,
+            font=("Segoe UI", 12, "bold"),
+            fg="#38bdf8",
+            bg="#0f172a"
+        ).pack(side=tk.LEFT)
+
         # 1. Mode Banner
         if self.filter_mode == "low_stock":
             banner = tk.Frame(self, bg="#fef2f2", bd=1, relief=tk.SOLID)

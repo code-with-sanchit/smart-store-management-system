@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tkinter as tk
@@ -11,6 +12,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from database.db_connection import get_db_connection, ensure_core_schema
 from common.store_status import check_store_status
+from common.logo_utils import get_logo_image, set_window_icon
 
 
 class SnapKartModernDashboard(tk.Tk):
@@ -24,6 +26,9 @@ class SnapKartModernDashboard(tk.Tk):
         self.geometry("1440x900")
         self.minsize(1250, 780)
         self.configure(bg="#0f172a")
+
+        # Set official window icon
+        set_window_icon(self)
 
         # Color palette
         self.COLOR_BG = "#f1f5f9"
@@ -52,12 +57,21 @@ class SnapKartModernDashboard(tk.Tk):
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
         sidebar.pack_propagate(False)
 
-        # Brand header
+        # Brand header with Official Logo
         brand_box = tk.Frame(sidebar, bg=self.COLOR_SIDEBAR)
-        brand_box.pack(fill=tk.X, padx=20, pady=(22, 18))
+        brand_box.pack(fill=tk.X, padx=18, pady=(20, 16))
 
-        tk.Label(brand_box, text="🛒 SnapKart", font=("Segoe UI", 17, "bold"), fg="#ffffff", bg=self.COLOR_SIDEBAR).pack(anchor="w")
-        tk.Label(brand_box, text="Store Management Portal", font=("Segoe UI", 8), fg="#94a3b8", bg=self.COLOR_SIDEBAR).pack(anchor="w", pady=(2, 0))
+        brand_top = tk.Frame(brand_box, bg=self.COLOR_SIDEBAR)
+        brand_top.pack(anchor="w")
+
+        self.sidebar_logo = get_logo_image(with_text=False, size=(34, 34))
+        if self.sidebar_logo:
+            lbl_ico = tk.Label(brand_top, image=self.sidebar_logo, bg=self.COLOR_SIDEBAR)
+            lbl_ico.image = self.sidebar_logo
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 8))
+
+        tk.Label(brand_top, text="SnapKart", font=("Segoe UI", 16, "bold"), fg="#38bdf8", bg=self.COLOR_SIDEBAR).pack(side=tk.LEFT)
+        tk.Label(brand_box, text="Store Management Portal", font=("Segoe UI", 8), fg="#94a3b8", bg=self.COLOR_SIDEBAR).pack(anchor="w", pady=(3, 0))
 
         # Menu navigation items
         menu_canvas = tk.Canvas(sidebar, bg=self.COLOR_SIDEBAR, bd=0, highlightthickness=0)
@@ -114,6 +128,7 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Billing" in menu_name:
             from admin_app.billing_pos_ui import BillingPOSFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Billing & POS Checkout Terminal")
             win.geometry("1120x720")
             BillingPOSFrame(win)
@@ -121,6 +136,7 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Low Stock" in menu_name:
             from admin_app.inventory_ui import InventoryFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Low Stock Restock Alerts")
             win.geometry("1100x720")
             InventoryFrame(win, filter_mode="low_stock")
@@ -128,6 +144,7 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Stock Management" in menu_name:
             from admin_app.inventory_ui import InventoryFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Stock Levels & Inventory Adjustment")
             win.geometry("1100x720")
             InventoryFrame(win, filter_mode="stock_mgmt")
@@ -135,6 +152,7 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Product Management" in menu_name:
             from admin_app.inventory_ui import InventoryFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Product Catalog Management")
             win.geometry("1100x720")
             InventoryFrame(win, filter_mode="all")
@@ -142,6 +160,7 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Transactions" in menu_name:
             from admin_app.transactions_ui import TransactionsFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Transaction Records & PDF Receipts")
             win.geometry("1000x660")
             TransactionsFrame(win)
@@ -149,16 +168,26 @@ class SnapKartModernDashboard(tk.Tk):
         elif "Store Operating Hours" in menu_name or "Store Hours" in menu_name:
             from admin_app.store_settings_ui import StoreSettingsFrame
             win = tk.Toplevel(self)
+            set_window_icon(win)
             win.title("SnapKart - Operating Schedule Settings")
             win.geometry("900x660")
             StoreSettingsFrame(win)
 
         elif "Analytics" in menu_name or "Reports" in menu_name:
-            from admin_app.analytics_ui import AnalyticsFrame
-            win = tk.Toplevel(self)
-            win.title("SnapKart - Business Analytics & Data Insights")
-            win.geometry("1050x720")
-            AnalyticsFrame(win)
+            if "Inventory Reports" in menu_name:
+                from data_analysis.sales_report import generate_sales_and_inventory_reports
+                from common.pdf_generator import open_pdf_file
+                pdf_path = generate_sales_and_inventory_reports()
+                if pdf_path and os.path.isfile(pdf_path):
+                    if messagebox.askyesno("Executive Report Ready", f"SnapKart Executive Business Report generated with official branding!\n\nLocation:\n{pdf_path}\n\nOpen PDF report now?"):
+                        open_pdf_file(pdf_path)
+            else:
+                from admin_app.analytics_ui import AnalyticsFrame
+                win = tk.Toplevel(self)
+                set_window_icon(win)
+                win.title("SnapKart - Business Analytics & Data Insights")
+                win.geometry("1050x720")
+                AnalyticsFrame(win)
 
         elif "Returns" in menu_name:
             self.open_returns_dialog()
@@ -180,6 +209,7 @@ class SnapKartModernDashboard(tk.Tk):
 
     def open_returns_dialog(self):
         win = tk.Toplevel(self)
+        set_window_icon(win)
         win.title("SnapKart - Process Return / Refund")
         win.geometry("460x340")
         win.configure(bg="#ffffff")
@@ -211,6 +241,7 @@ class SnapKartModernDashboard(tk.Tk):
 
     def open_suppliers_dialog(self):
         win = tk.Toplevel(self)
+        set_window_icon(win)
         win.title("SnapKart - Wholesale Suppliers Directory")
         win.geometry("980x620")
         win.configure(bg="#f8fafc")
@@ -290,6 +321,7 @@ class SnapKartModernDashboard(tk.Tk):
         # Add Supplier Dialog
         def open_add_supplier_dialog():
             d = tk.Toplevel(win)
+            set_window_icon(d)
             d.title("Add New Wholesale Supplier")
             d.geometry("450x420")
             d.configure(bg="#ffffff")
@@ -358,6 +390,7 @@ class SnapKartModernDashboard(tk.Tk):
 
     def open_user_management_dialog(self):
         win = tk.Toplevel(self)
+        set_window_icon(win)
         win.title("SnapKart - Customer & Staff Management Portal")
         win.geometry("1020x660")
         win.configure(bg="#f8fafc")
@@ -422,6 +455,7 @@ class SnapKartModernDashboard(tk.Tk):
 
         def add_staff_dlg():
             d = tk.Toplevel(win)
+            set_window_icon(d)
             d.title("Add New Staff Member")
             d.geometry("420x360")
             d.configure(bg="#ffffff")
@@ -533,6 +567,7 @@ class SnapKartModernDashboard(tk.Tk):
 
         def add_cust_dlg():
             d = tk.Toplevel(win)
+            set_window_icon(d)
             d.title("Register New Customer")
             d.geometry("400x320")
             d.configure(bg="#ffffff")
@@ -606,6 +641,7 @@ class SnapKartModernDashboard(tk.Tk):
 
     def open_system_settings_dialog(self):
         win = tk.Toplevel(self)
+        set_window_icon(win)
         win.title("SnapKart - System Configuration & Maintenance")
         win.geometry("640x560")
         win.configure(bg="#ffffff")
@@ -691,12 +727,22 @@ class SnapKartModernDashboard(tk.Tk):
 
     def open_help_support_dialog(self):
         win = tk.Toplevel(self)
+        set_window_icon(win)
         win.title("SnapKart - Admin Help & Technical Diagnostics")
-        win.geometry("640x560")
+        win.geometry("640x580")
         win.configure(bg="#ffffff")
         win.transient(self)
 
-        tk.Label(win, text="🛠️ System Help, Documentation & Support", font=("Segoe UI", 13, "bold"), fg=self.COLOR_PRIMARY, bg="#ffffff").pack(pady=(15, 6))
+        hdr_row = tk.Frame(win, bg="#ffffff")
+        hdr_row.pack(pady=(15, 6))
+
+        h_logo = get_logo_image(with_text=False, size=(32, 32))
+        if h_logo:
+            lbl_l = tk.Label(hdr_row, image=h_logo, bg="#ffffff")
+            lbl_l.image = h_logo
+            lbl_l.pack(side=tk.LEFT, padx=(0, 6))
+
+        tk.Label(hdr_row, text="SnapKart System Help & Support", font=("Segoe UI", 13, "bold"), fg=self.COLOR_PRIMARY, bg="#ffffff").pack(side=tk.LEFT)
 
         # Health Snapshot
         diag_box = tk.LabelFrame(win, text="Live System Diagnostics & Health Status", bg="#ffffff", font=("Segoe UI", 9, "bold"))

@@ -9,6 +9,7 @@ from database.db_connection import get_db_connection, ensure_core_schema
 from common.store_status import check_store_status
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
 from common.image_loader import get_product_image
+from common.logo_utils import get_logo_image, set_window_icon
 from user_app.auth_ui import AuthDialog
 from user_app.upi_payment_dialog import UPIPaymentDialog
 
@@ -38,6 +39,9 @@ class SnapKartCustomerApp(tk.Tk):
         self.geometry("1440x900")
         self.minsize(1220, 750)
         self.configure(bg="#f8fafc")
+
+        # Set official window icon
+        set_window_icon(self)
 
         # Color Palette
         self.COLOR_GREEN = "#16a34a"
@@ -85,13 +89,23 @@ class SnapKartCustomerApp(tk.Tk):
         nav.pack(fill=tk.X, side=tk.TOP)
         nav.pack_propagate(False)
 
-        # Brand Title
+        # Brand Title with Official Logo
         brand_box = tk.Frame(nav, bg=self.COLOR_WHITE, cursor="hand2")
         brand_box.pack(side=tk.LEFT, padx=18)
         brand_box.bind("<Button-1>", lambda e: self.show_home_view())
 
-        lbl_brand = tk.Label(brand_box, text="🛒 SnapKart", font=("Segoe UI", 16, "bold"), fg=self.COLOR_GREEN, bg=self.COLOR_WHITE)
-        lbl_brand.pack(anchor="w")
+        brand_inner = tk.Frame(brand_box, bg=self.COLOR_WHITE)
+        brand_inner.pack(anchor="w")
+        brand_inner.bind("<Button-1>", lambda e: self.show_home_view())
+
+        self.nav_logo = get_logo_image(with_text=False, size=(34, 34))
+        if self.nav_logo:
+            lbl_ico = tk.Label(brand_inner, image=self.nav_logo, bg=self.COLOR_WHITE)
+            lbl_ico.pack(side=tk.LEFT, padx=(0, 6))
+            lbl_ico.bind("<Button-1>", lambda e: self.show_home_view())
+
+        lbl_brand = tk.Label(brand_inner, text="SnapKart", font=("Segoe UI", 16, "bold"), fg=self.COLOR_GREEN, bg=self.COLOR_WHITE)
+        lbl_brand.pack(side=tk.LEFT)
         lbl_brand.bind("<Button-1>", lambda e: self.show_home_view())
 
         lbl_tag = tk.Label(brand_box, text="Your Neighbourhood Store, Online", font=("Segoe UI", 7), fg=self.COLOR_MUTED, bg=self.COLOR_WHITE)
@@ -162,6 +176,7 @@ class SnapKartCustomerApp(tk.Tk):
         win.geometry("450x380")
         win.resizable(False, False)
         win.configure(bg="#ffffff")
+        set_window_icon(win)
         win.transient(self)
         win.grab_set()
 
@@ -205,6 +220,7 @@ class SnapKartCustomerApp(tk.Tk):
         win.title("SnapKart - Browse Departments")
         win.geometry("520x450")
         win.configure(bg="#ffffff")
+        set_window_icon(win)
         win.transient(self)
 
         tk.Label(win, text="🏬 All Store Departments", font=("Segoe UI", 13, "bold"), fg=self.COLOR_DARK, bg="#ffffff").pack(pady=12)
@@ -243,6 +259,7 @@ class SnapKartCustomerApp(tk.Tk):
         win.title("SnapKart - Special Deals & Offers")
         win.geometry("550x460")
         win.configure(bg="#ffffff")
+        set_window_icon(win)
         win.transient(self)
 
         tk.Label(win, text="🏷️ Live Store Discount Offers", font=("Segoe UI", 14, "bold"), fg=self.COLOR_GREEN, bg="#ffffff").pack(pady=(14, 4))
@@ -267,6 +284,7 @@ class SnapKartCustomerApp(tk.Tk):
         win.title("SnapKart - My Orders & Printable Invoices")
         win.geometry("780x520")
         win.configure(bg="#ffffff")
+        set_window_icon(win)
         win.transient(self)
 
         tk.Label(win, text="📦 Your Recent Order History", font=("Segoe UI", 13, "bold"), fg=self.COLOR_DARK, bg="#ffffff").pack(pady=(12, 4))
@@ -383,11 +401,19 @@ class SnapKartCustomerApp(tk.Tk):
     def open_help_support_modal(self):
         win = tk.Toplevel(self)
         win.title("SnapKart - Help & Customer Support")
-        win.geometry("500x420")
+        win.geometry("500x460")
         win.configure(bg="#ffffff")
+        set_window_icon(win)
         win.transient(self)
 
-        tk.Label(win, text="❓ SnapKart Help Center", font=("Segoe UI", 13, "bold"), fg=self.COLOR_GREEN, bg="#ffffff").pack(pady=(15, 4))
+        head_frame = tk.Frame(win, bg="#ffffff")
+        head_frame.pack(pady=(15, 4))
+        h_logo = get_logo_image(with_text=False, size=(32, 32))
+        if h_logo:
+            lbl_l = tk.Label(head_frame, image=h_logo, bg="#ffffff")
+            lbl_l.image = h_logo
+            lbl_l.pack(side=tk.LEFT, padx=(0, 6))
+        tk.Label(head_frame, text="SnapKart Help Center", font=("Segoe UI", 13, "bold"), fg=self.COLOR_GREEN, bg="#ffffff").pack(side=tk.LEFT)
 
         info_text = (
             "📍 Store Headquarters:\n"
