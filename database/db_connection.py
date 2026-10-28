@@ -1,15 +1,28 @@
 import os
+
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, pooling
 
 DB_CONFIG = {
     'host': os.environ.get('SNAPKART_DB_HOST', 'localhost'),
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
-    'password': os.environ.get('SNAPKART_DB_PASSWORD', 'Sanc@2007'),
+    'password': os.environ.get('SNAPKART_DB_PASSWORD', ''),
     'database': os.environ.get('SNAPKART_DB_NAME', 'smart_store_db'),
     'autocommit': False,
-    'connection_timeout': 10,
+    'connection_timeout': 5,
+    'pool_name': 'snapkart_pool',
+    'pool_size': 5,
 }
+
+_pool = None
+
+
+def _get_pool():
+    """Create the small shared connection pool on first use."""
+    global _pool
+    if _pool is None:
+        _pool = pooling.MySQLConnectionPool(**DB_CONFIG)
+    return _pool
 
 
 def get_db_connection():
@@ -19,7 +32,7 @@ def get_db_connection():
     Returns None if connection fails.
     """
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = _get_pool().get_connection()
         if connection.is_connected():
             return connection
     except Error as e:
@@ -38,6 +51,19 @@ def ensure_core_schema():
 
     try:
         cursor = conn.cursor(dictionary=True)
+
+        # These indexes keep the paginated catalog and daily dashboard queries quick
+        # when a store has a large product list. Existing databases can be upgraded
+        # without being rebuilt.
+        for statement in (
+            "CREATE INDEX idx_catalog_category_stock ON inventory (category, stock_quantity, item_id)",
+            "CREATE INDEX idx_catalog_stock_item ON inventory (stock_quantity, item_id)",
+            "CREATE INDEX idx_sales_date_amount ON sales (sale_datetime, total_amount)",
+        ):
+            try:
+                cursor.execute(statement)
+            except Error:
+                pass
 
         # Ensure payment_method column exists on sales
         cursor.execute("""

@@ -5,6 +5,9 @@ env/
 
 # Python cache
 __pycache__/
+*.env
+!.env.example
+.env
 *.py[cod]
 *$py.class
 *.pyo
