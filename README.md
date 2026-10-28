@@ -119,4 +119,12 @@ From the launcher, you can:
   ```powershell
   python -m data_analysis.sales_report
   ```
-
+## Configuration and first run
+
+1. Create the MySQL database and tables with `python database/setup_db.py`.
+2. Set the database environment variables shown in `.env.example` before opening the app.
+3. Run `python database/populate_inventory.py` once to add the starter catalogue to an empty database.
+4. Start the desktop launcher with `python main.py`.
+
+The starter catalogue is intentionally modest and varied. It does not replace existing products or sales. To deliberately reset demo data, run `python database/populate_inventory.py --replace`.
+
