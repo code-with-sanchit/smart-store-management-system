@@ -1,10 +1,26 @@
 import hashlib
+import hmac
+import secrets
 from database.db_connection import get_db_connection
 
 
 def hash_password(password: str) -> str:
-    """Converts plain text password into a secure SHA-256 hash string."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    """Return a salted password hash suitable for the local customer table."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("ascii"), 260_000)
+    return f"pbkdf2_sha256${salt}${digest.hex()}"
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Check modern hashes and retain sign-in access for legacy SHA-256 users."""
+    if stored_hash.startswith("pbkdf2_sha256$"):
+        try:
+            _, salt, expected = stored_hash.split("$", 2)
+        except ValueError:
+            return False
+        actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("ascii"), 260_000).hex()
+        return hmac.compare_digest(actual, expected)
+    return hmac.compare_digest(stored_hash, hashlib.sha256(password.encode("utf-8")).hexdigest())
 
 
 def register_customer(full_name: str, email: str, phone: str, password: str):
@@ -89,8 +105,15 @@ def login_customer(email: str, password: str):
             return False, None, "No account found with this email."
 
         # Compare password hash
-        if user["password_hash"] != hash_password(password):
+        if not verify_password(password, user["password_hash"]):
             return False, None, "Incorrect password. Please try again."
+
+        if not user["password_hash"].startswith("pbkdf2_sha256$"):
+            cursor.execute(
+                "UPDATE customers SET password_hash = %s WHERE customer_id = %s",
+                (hash_password(password), user["customer_id"])
+            )
+            conn.commit()
 
         # Return user details without the password hash
         del user["password_hash"]
