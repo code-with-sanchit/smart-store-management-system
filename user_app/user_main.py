@@ -10,6 +10,8 @@ from common.store_status import check_store_status
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
 from common.image_loader import get_product_image
 from common.logo_utils import get_logo_image, set_window_icon
+from common.pricing import delivery_fee
+from common.ui import Debouncer
 from user_app.auth_ui import AuthDialog
 from user_app.upi_payment_dialog import UPIPaymentDialog
 
@@ -64,6 +66,7 @@ class SnapKartCustomerApp(tk.Tk):
         self.page_size = 48
         self.total_products = 0
         self.total_pages = 1
+        self.search_debouncer = Debouncer(self)
 
         # Build Main UI Components
         self.create_top_navbar()
@@ -652,7 +655,7 @@ class SnapKartCustomerApp(tk.Tk):
 
     def on_search_query(self):
         self.current_page = 1
-        self.load_products_from_db()
+        self.search_debouncer.call(self.load_products_from_db)
 
     def on_sort_changed(self):
         self.current_page = 1
@@ -804,7 +807,7 @@ class SnapKartCustomerApp(tk.Tk):
             stock_fg = self.COLOR_MUTED
             stock_text = f"Stock: {stock_qty}"
 
-        tk.Label(tag_row, text="Bestseller", font=("Segoe UI", 7, "bold"), bg="#dcfce7", fg=self.COLOR_GREEN, padx=4).pack(side=tk.LEFT)
+        tk.Label(tag_row, text="Available now", font=("Segoe UI", 7, "bold"), bg="#dcfce7", fg=self.COLOR_GREEN, padx=4).pack(side=tk.LEFT)
         tk.Label(tag_row, text=stock_text, font=("Segoe UI", 7), fg=stock_fg, bg=self.COLOR_WHITE).pack(side=tk.RIGHT)
 
         # 3. Product Details
@@ -967,12 +970,12 @@ class SnapKartCustomerApp(tk.Tk):
             tk.Button(ctrl_box, text=" + ", font=("Segoe UI", 7, "bold"), bg="#e2e8f0", bd=0, command=lambda pid=p_id: self.update_cart_qty(pid, 1)).pack(side=tk.LEFT)
             tk.Button(ctrl_box, text="🗑️", font=("Segoe UI", 8), fg="#dc2626", bg="#f8fafc", bd=0, cursor="hand2", command=lambda pid=p_id: self.remove_from_cart(pid)).pack(side=tk.RIGHT)
 
-        delivery_fee = 20.0 if self.cart else 0.0
-        total_bill = subtotal + delivery_fee
+        shipping = delivery_fee(subtotal)
+        total_bill = subtotal + shipping
 
         self.lbl_cart_title.config(text=f"Your Cart ({total_items_count})")
         self.lbl_subtotal.config(text=f"₹ {subtotal:,.2f}")
-        self.lbl_delivery.config(text=f"₹ {delivery_fee:.2f}")
+        self.lbl_delivery.config(text="Free" if shipping == 0 and self.cart else f"₹ {shipping:.2f}")
         self.lbl_total.config(text=f"₹ {total_bill:,.2f}")
 
     # =========================================================================
@@ -1004,7 +1007,8 @@ class SnapKartCustomerApp(tk.Tk):
                 return
 
         subtotal = sum(i["price"] * i["qty"] for i in self.cart.values())
-        total_bill = subtotal + 20.0
+        shipping = delivery_fee(subtotal)
+        total_bill = subtotal + shipping
         cust_name = self.current_user["full_name"] if self.current_user else "Guest Customer"
 
         # Open Simulated UPI Gateway
@@ -1012,10 +1016,10 @@ class SnapKartCustomerApp(tk.Tk):
             parent=self,
             total_amount=total_bill,
             customer_name=cust_name,
-            on_payment_success=lambda: self.complete_order_and_download(subtotal, total_bill, cust_name)
+            on_payment_success=lambda: self.complete_order_and_download(subtotal, shipping, total_bill, cust_name)
         )
 
-    def complete_order_and_download(self, subtotal, total_bill, cust_name):
+    def complete_order_and_download(self, subtotal, shipping, total_bill, cust_name):
         conn = get_db_connection()
         if not conn:
             messagebox.showerror("Error", "Could not connect to MySQL database.")
@@ -1034,16 +1038,20 @@ class SnapKartCustomerApp(tk.Tk):
             )
             sale_id = cursor.lastrowid
 
-            # Insert Sale Items & Deduct Stock
+            # Reserve stock first so concurrent orders cannot oversell an item.
             for p_id, item in self.cart.items():
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity - %s "
+                    "WHERE item_id = %s AND stock_quantity >= %s",
+                    (item["qty"], p_id, item["qty"])
+                )
+                if cursor.rowcount != 1:
+                    raise ValueError(f"{item['name']} is no longer available in the requested quantity.")
+
                 item_sub = item["price"] * item["qty"]
                 cursor.execute(
                     "INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal) VALUES (%s, %s, %s, %s, %s)",
                     (sale_id, p_id, item["qty"], item["price"], item_sub)
-                )
-                cursor.execute(
-                    "UPDATE inventory SET stock_quantity = GREATEST(stock_quantity - %s, 0) WHERE item_id = %s",
-                    (item["qty"], p_id)
                 )
 
             conn.commit()
@@ -1055,7 +1063,7 @@ class SnapKartCustomerApp(tk.Tk):
                 sale_id=sale_id,
                 items_dict=self.cart,
                 subtotal=subtotal,
-                delivery_fee=20.0,
+                delivery_fee=shipping,
                 total_amount=total_bill,
                 customer_name=cust_name,
                 customer_address=full_addr,
@@ -1091,6 +1099,7 @@ class SnapKartCustomerApp(tk.Tk):
             self.load_products_from_db()
 
         except Exception as e:
+            conn.rollback()
             messagebox.showerror("Checkout Error", f"Transaction failed: {e}")
         finally:
             if cursor is not None:

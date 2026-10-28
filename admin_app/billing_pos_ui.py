@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
+from common.ui import Debouncer
 from common.logo_utils import get_logo_image
 
 
@@ -26,6 +27,7 @@ class BillingPOSFrame(ttk.Frame):
 
         self.bill_items = {}  # {item_id: {"name": str, "price": float, "qty": int, "max_stock": int}}
         self.last_sale_id = None
+        self.search_debouncer = Debouncer(self)
 
         self.create_ui()
         self.load_quick_catalog()
@@ -265,7 +267,7 @@ class BillingPOSFrame(ttk.Frame):
             print(f"POS Catalog error: {e}")
 
     def filter_products(self):
-        self.load_quick_catalog()
+        self.search_debouncer.call(self.load_quick_catalog)
 
     def clear_search(self):
         self.search_var.set("")
@@ -407,19 +409,22 @@ class BillingPOSFrame(ttk.Frame):
             """, (grand_total, pay_mode))
             sale_id = cursor.lastrowid
 
-            # 2. Insert items into sale_items and update inventory stock
+            # 2. Reserve stock and write the sale as one transaction.
             for item_id, item in self.bill_items.items():
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity - %s "
+                    "WHERE item_id = %s AND stock_quantity >= %s",
+                    (item["qty"], item_id, item["qty"])
+                )
+                if cursor.rowcount != 1:
+                    raise ValueError(f"{item['name']} no longer has enough stock.")
+
                 item_subtotal = round(float(item["qty"]) * float(item["price"]), 2)
                 cursor.execute("""
                     INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal)
                     VALUES (%s, %s, %s, %s, %s);
                 """, (sale_id, item_id, item["qty"], item["price"], item_subtotal))
 
-                cursor.execute("""
-                    UPDATE inventory
-                    SET stock_quantity = GREATEST(stock_quantity - %s, 0)
-                    WHERE item_id = %s;
-                """, (item["qty"], item_id))
 
             conn.commit()
             cursor.close()

@@ -10,6 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from database.db_connection import get_db_connection
 from common.logo_utils import get_logo_image
+from common.ui import Debouncer
 
 
 class InventoryFrame(ttk.Frame):
@@ -28,6 +29,7 @@ class InventoryFrame(ttk.Frame):
         self.page_size = 100
         self.total_count = 0
         self.total_pages = 1
+        self.search_debouncer = Debouncer(self)
 
         self.create_widgets()
         self.load_categories()
@@ -205,7 +207,7 @@ class InventoryFrame(ttk.Frame):
 
     def on_search_change(self):
         self.current_page = 1
-        self.load_inventory()
+        self.search_debouncer.call(self.load_inventory)
 
     def on_filter_change(self):
         self.current_page = 1
