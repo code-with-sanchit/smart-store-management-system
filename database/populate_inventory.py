@@ -1,5 +1,6 @@
 import random
 import sys
+import argparse
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -346,7 +347,7 @@ def build_all_items():
     return all_items
 
 
-def generate_items(target_count=10000):
+def generate_items(target_count=600):
     all_items = build_all_items()
     print(f"Total generated unique products: {len(all_items)}")
 
@@ -359,7 +360,7 @@ def generate_items(target_count=10000):
     return chosen
 
 
-def insert_bulk_inventory(target_count=10000):
+def insert_bulk_inventory(target_count=600, replace=False):
     conn = get_db_connection()
     if not conn:
         print("Database connection failed. Please check db_connection.py.")
@@ -369,11 +370,19 @@ def insert_bulk_inventory(target_count=10000):
     try:
         cursor = conn.cursor()
 
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-        cursor.execute("TRUNCATE TABLE sale_items;")
-        cursor.execute("TRUNCATE TABLE sales;")
-        cursor.execute("TRUNCATE TABLE inventory;")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        cursor.execute("SELECT COUNT(*) FROM inventory")
+        existing_count = cursor.fetchone()[0]
+        if existing_count and not replace:
+            print(f"Inventory already contains {existing_count} products. Nothing was replaced.")
+            print("Use --replace only when you intentionally want to clear sales and reload demo data.")
+            return
+
+        if replace:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+            cursor.execute("TRUNCATE TABLE sale_items;")
+            cursor.execute("TRUNCATE TABLE sales;")
+            cursor.execute("TRUNCATE TABLE inventory;")
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
         items = generate_items(target_count)
 
@@ -395,4 +404,8 @@ def insert_bulk_inventory(target_count=10000):
 
 
 if __name__ == "__main__":
-    insert_bulk_inventory(target_count=10000)
+    parser = argparse.ArgumentParser(description="Seed a balanced SnapKart demo catalogue.")
+    parser.add_argument("--count", type=int, default=600, help="number of products to add to an empty catalogue")
+    parser.add_argument("--replace", action="store_true", help="clear sales and inventory before loading demo data")
+    args = parser.parse_args()
+    insert_bulk_inventory(target_count=args.count, replace=args.replace)
