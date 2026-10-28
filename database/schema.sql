@@ -44,7 +44,9 @@ CREATE TABLE IF NOT EXISTS inventory (
     price DECIMAL(10, 2) NOT NULL,
     stock_quantity INT NOT NULL,
     INDEX idx_category (category),
-    INDEX idx_name (name)
+    INDEX idx_name (name),
+    INDEX idx_catalog_category_stock (category, stock_quantity, item_id),
+    INDEX idx_catalog_stock_item (stock_quantity, item_id)
 );
 
 -- 4. Completed Sales / Orders

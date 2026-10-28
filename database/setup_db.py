@@ -5,7 +5,7 @@ from mysql.connector import Error
 ROOT_CONFIG = {
     'host': os.environ.get('SNAPKART_DB_HOST', 'localhost'),
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
-    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', 'Sanc@2007'))
+    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', ''))
 }
 
 
@@ -30,6 +30,8 @@ def create_database_and_tables():
             is_closed_today BOOLEAN DEFAULT FALSE
         );
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_catalog_category_stock ON inventory (category, stock_quantity, item_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_catalog_stock_item ON inventory (stock_quantity, item_id)")
 
         # Default operating hours: 09:00 AM to 09:00 PM
         default_hours = [
