@@ -292,30 +292,27 @@ class SnapKartCustomerApp(tk.Tk):
 
         tk.Label(win, text="📦 Your Recent Order History", font=("Segoe UI", 13, "bold"), fg=self.COLOR_DARK, bg="#ffffff").pack(pady=(12, 4))
 
+        if self.current_user is None:
+            tk.Label(
+                win,
+                text="Sign in to view your saved orders and download invoices.",
+                font=("Segoe UI", 10), fg=self.COLOR_MUTED, bg="#ffffff"
+            ).pack(pady=40)
+            return
+
         conn = get_db_connection()
         if not conn:
             messagebox.showerror("Error", "Could not connect to database.")
             return
 
         cursor = conn.cursor(dictionary=True)
-        cust_id = self.current_user["customer_id"] if self.current_user else None
-
-        if cust_id:
-            cursor.execute("""
-                SELECT sale_id, DATE_FORMAT(sale_datetime, '%Y-%m-%d %h:%i %p') AS s_time,
-                       total_amount, payment_method
-                FROM sales
-                WHERE customer_id = %s
-                ORDER BY sale_datetime DESC;
-            """, (cust_id,))
-        else:
-            cursor.execute("""
-                SELECT sale_id, DATE_FORMAT(sale_datetime, '%Y-%m-%d %h:%i %p') AS s_time,
-                       total_amount, payment_method
-                FROM sales
-                ORDER BY sale_datetime DESC
-                LIMIT 10;
-            """)
+        cursor.execute("""
+            SELECT sale_id, DATE_FORMAT(sale_datetime, '%Y-%m-%d %h:%i %p') AS s_time,
+                   total_amount, payment_method
+            FROM sales
+            WHERE customer_id = %s
+            ORDER BY sale_datetime DESC;
+        """, (self.current_user["customer_id"],))
 
         sales = cursor.fetchall()
         cursor.close()
