@@ -185,12 +185,26 @@ class StoreSettingsFrame(ttk.Frame):
             )
 
     def save_schedule(self):
+        # Validate time format for all days before opening database transaction
+        import re
+        time_pattern = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
+
+        for day, (open_entry, close_entry) in self.day_entries.items():
+            o_val = open_entry.get().strip()
+            c_val = close_entry.get().strip()
+            if not time_pattern.match(o_val) or not time_pattern.match(c_val):
+                messagebox.showerror(
+                    "Invalid Time Format",
+                    f"Please enter valid times in 24-hour format (HH:MM:SS or HH:MM) for {day}."
+                )
+                return
+
         conn = get_db_connection()
         if not conn:
             messagebox.showerror("Error", "Could not connect to database.")
             return
 
-        cursor = conn.cursor()
+        cursor = None
         query = """
             UPDATE store_hours
             SET open_time = %s, close_time = %s, is_closed_today = %s
@@ -198,10 +212,17 @@ class StoreSettingsFrame(ttk.Frame):
         """
 
         try:
+            cursor = conn.cursor()
             for day, (open_entry, close_entry) in self.day_entries.items():
                 open_val = open_entry.get().strip()
                 close_val = close_entry.get().strip()
                 closed_val = self.closed_vars[day].get()
+
+                # Normalize HH:MM to HH:MM:SS if needed
+                if open_val.count(":") == 1:
+                    open_val += ":00"
+                if close_val.count(":") == 1:
+                    close_val += ":00"
 
                 cursor.execute(query, (open_val, close_val, closed_val, day))
 
@@ -212,8 +233,13 @@ class StoreSettingsFrame(ttk.Frame):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save schedule: {e}")
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn and conn.is_connected():
+                conn.close()
 
 
 if __name__ == "__main__":

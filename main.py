@@ -168,10 +168,10 @@ class SnapKartLauncher(tk.Tk):
             )
 
     def open_customer_app(self):
-        subprocess.Popen([sys.executable, "-m", "user_app.user_main"])
+        subprocess.Popen([sys.executable, "-m", "user_app.user_main"], cwd=str(PROJECT_ROOT))
 
     def open_admin_app(self):
-        subprocess.Popen([sys.executable, "-m", "admin_app.admin_main"])
+        subprocess.Popen([sys.executable, "-m", "admin_app.admin_main"], cwd=str(PROJECT_ROOT))
 
     def run_reports_script(self):
         from data_analysis.sales_report import generate_sales_and_inventory_reports

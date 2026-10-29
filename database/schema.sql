@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS customers (
     full_name VARCHAR(120) NOT NULL,
     email VARCHAR(120) NOT NULL UNIQUE,
     phone VARCHAR(20) NOT NULL,
-    password_hash VARCHAR(64) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS sales (
     sale_id INT AUTO_INCREMENT PRIMARY KEY,
     sale_datetime DATETIME NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
-    payment_method VARCHAR(20) DEFAULT 'UPI',
+    payment_method VARCHAR(50) DEFAULT 'UPI',
     customer_id INT NULL,
     CONSTRAINT fk_sales_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
     INDEX idx_sale_datetime (sale_datetime)

@@ -43,26 +43,34 @@ def _find_image(item_id: int, item_name: str, category: str = "") -> Path | None
     return None
 
 
-def _unavailable_photo(size: tuple[int, int]) -> ImageTk.PhotoImage:
+def _unavailable_photo(size: tuple[int, int]) -> ImageTk.PhotoImage | None:
     """Use an honest unavailable state if no photo exists."""
-    image = Image.new("RGBA", size, "#f8fafc")
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((0, 0, size[0] - 1, size[1] - 1), outline="#cbd5e1", width=1)
-    draw.text((16, max(12, size[1] // 2 - 8)), "Product photo unavailable", fill="#64748b")
-    return ImageTk.PhotoImage(image)
+    try:
+        image = Image.new("RGBA", size, "#f8fafc")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((0, 0, size[0] - 1, size[1] - 1), outline="#cbd5e1", width=1)
+        draw.text((16, max(12, size[1] // 2 - 8)), "Product photo unavailable", fill="#64748b")
+        return ImageTk.PhotoImage(image)
+    except Exception:
+        return None
 
 
-def get_product_image(item_id: int, item_name: str, category: str, size: tuple[int, int] = (210, 110)):
+def get_product_image(item_id: int | str, item_name: str, category: str, size: tuple[int, int] = (210, 110)) -> ImageTk.PhotoImage | None:
     """Return the photo for a product, sized for a Tk card.
 
     Checks item-specific photo first, then exact catalog photo, then
     category department photo, and falls back to a clean placeholder.
     """
-    cache_key = (int(item_id), size)
+    try:
+        numeric_id = int(item_id)
+    except (ValueError, TypeError):
+        numeric_id = 0
+
+    cache_key = (numeric_id, size)
     if cache_key in _TK_IMAGE_CACHE:
         return _TK_IMAGE_CACHE[cache_key]
 
-    target_file = _find_image(int(item_id), item_name, category)
+    target_file = _find_image(numeric_id, item_name, category)
     if target_file:
         try:
             with Image.open(target_file) as source:
@@ -73,9 +81,10 @@ def get_product_image(item_id: int, item_name: str, category: str, size: tuple[i
             photo = ImageTk.PhotoImage(canvas)
             _TK_IMAGE_CACHE[cache_key] = photo
             return photo
-        except (OSError, ValueError) as error:
+        except Exception as error:
             print(f"Could not render product image {target_file}: {error}")
 
     photo = _unavailable_photo(size)
-    _TK_IMAGE_CACHE[cache_key] = photo
+    if photo is not None:
+        _TK_IMAGE_CACHE[cache_key] = photo
     return photo

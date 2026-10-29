@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 
 # Ignore SQLAlchemy UserWarning from pandas read_sql
-warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 from common.logo_utils import get_logo_path
@@ -255,6 +255,11 @@ def generate_sales_and_inventory_reports(export_dir=None):
         items_df = pd.read_sql("SELECT * FROM sale_items", conn)
         inventory_df = pd.read_sql("SELECT * FROM inventory", conn)
 
+        total_revenue = 0.0
+        total_orders = 0
+        avg_order_val = 0.0
+        median_order_val = 0.0
+
         # ---------------------------------------------------------------------
         # A. SALES PERFORMANCE METRICS (NumPy & Pandas)
         # ---------------------------------------------------------------------
@@ -283,6 +288,9 @@ def generate_sales_and_inventory_reports(export_dir=None):
                     .sort_values(by="units_sold", ascending=False)
                     .head(10)
                 )
+                top_products_path = os.path.join(export_dir, "top_selling_products.csv")
+                top_products.to_csv(top_products_path)
+                safe_print(f"    - Saved Top Products to   : {top_products_path}")
 
             # Export Daily Sales Summary CSV
             sales_summary_path = os.path.join(export_dir, "daily_sales_summary.csv")
@@ -290,6 +298,11 @@ def generate_sales_and_inventory_reports(export_dir=None):
             safe_print(f"    - Saved Sales Report to   : {sales_summary_path}")
         else:
             safe_print("\n[!] Sales Overview: No sales records found yet.")
+
+        total_skus = 0
+        total_stock_units = 0
+        total_stock_value = 0.0
+        reorder_df = None
 
         # ---------------------------------------------------------------------
         # B. INVENTORY & RESTOCK ANALYSIS

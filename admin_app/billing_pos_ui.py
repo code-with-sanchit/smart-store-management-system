@@ -261,10 +261,16 @@ class BillingPOSFrame(ttk.Frame):
             rows = cursor.fetchall()
             for r in rows:
                 self.catalog_tree.insert("", tk.END, values=(r["item_id"], r["name"], r["category"], f"{float(r['price']):.2f}", r["stock_quantity"]))
-            cursor.close()
-            conn.close()
         except Exception as e:
             print(f"POS Catalog error: {e}")
+        finally:
+            if 'cursor' in locals() and cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn and conn.is_connected():
+                conn.close()
 
     def filter_products(self):
         self.search_debouncer.call(self.load_quick_catalog)
@@ -427,8 +433,6 @@ class BillingPOSFrame(ttk.Frame):
 
 
             conn.commit()
-            cursor.close()
-            conn.close()
 
             self.last_sale_id = sale_id
 
@@ -467,6 +471,16 @@ class BillingPOSFrame(ttk.Frame):
 
         except Exception as e:
             if conn and conn.is_connected():
-                conn.rollback()
-                conn.close()
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             messagebox.showerror("Transaction Failed", f"Error recording sale: {e}")
+        finally:
+            if 'cursor' in locals() and cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn and conn.is_connected():
+                conn.close()

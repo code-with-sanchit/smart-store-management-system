@@ -1,11 +1,27 @@
 import os
+from pathlib import Path
 import mysql.connector
 from mysql.connector import Error
+
+# Load .env if present
+env_file = Path(__file__).resolve().parent.parent / ".env"
+if env_file.is_file():
+    try:
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip().strip("'\"")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+    except Exception:
+        pass
 
 ROOT_CONFIG = {
     'host': os.environ.get('SNAPKART_DB_HOST', 'localhost'),
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
-    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', ''))
+    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', 'Sanc@2007'))
 }
 
 
@@ -30,8 +46,6 @@ def create_database_and_tables():
             is_closed_today BOOLEAN DEFAULT FALSE
         );
         """)
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_catalog_category_stock ON inventory (category, stock_quantity, item_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_catalog_stock_item ON inventory (stock_quantity, item_id)")
 
         # Default operating hours: 09:00 AM to 09:00 PM
         default_hours = [
@@ -56,7 +70,11 @@ def create_database_and_tables():
             name VARCHAR(150) NOT NULL,
             category VARCHAR(80) NOT NULL,
             price DECIMAL(10, 2) NOT NULL,
-            stock_quantity INT NOT NULL
+            stock_quantity INT NOT NULL,
+            INDEX idx_category (category),
+            INDEX idx_name (name),
+            INDEX idx_catalog_category_stock (category, stock_quantity, item_id),
+            INDEX idx_catalog_stock_item (stock_quantity, item_id)
         );
         """)
 

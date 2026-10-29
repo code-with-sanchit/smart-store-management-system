@@ -25,10 +25,11 @@ def create_customer_table():
             full_name VARCHAR(120) NOT NULL,
             email VARCHAR(120) NOT NULL UNIQUE,
             phone VARCHAR(20) NOT NULL,
-            password_hash VARCHAR(64) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         """)
+        cursor.execute("ALTER TABLE customers MODIFY COLUMN password_hash VARCHAR(255) NOT NULL;")
         print("Table 'customers' created or already exists.")
 
         # 2. Add customer_id column to sales table if not already added

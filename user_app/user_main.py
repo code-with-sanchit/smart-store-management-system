@@ -307,8 +307,7 @@ class SnapKartCustomerApp(tk.Tk):
 
         cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-            SELECT sale_id, DATE_FORMAT(sale_datetime, '%Y-%m-%d %h:%i %p') AS s_time,
-                   total_amount, payment_method
+            SELECT sale_id, sale_datetime, total_amount, payment_method
             FROM sales
             WHERE customer_id = %s
             ORDER BY sale_datetime DESC;
@@ -335,9 +334,11 @@ class SnapKartCustomerApp(tk.Tk):
         tree.column("payment", width=120, anchor="center")
 
         for s in sales:
+            s_dt = s.get("sale_datetime")
+            s_time = s_dt.strftime("%Y-%m-%d %I:%M %p") if isinstance(s_dt, datetime) else str(s_dt or "")
             tree.insert("", tk.END, values=(
                 f"#{s['sale_id']}",
-                s["s_time"],
+                s_time,
                 f"₹ {float(s['total_amount']):.2f}",
                 s["payment_method"] or "UPI"
             ))
@@ -374,12 +375,12 @@ class SnapKartCustomerApp(tk.Tk):
                     subtotal += (qty * price)
                     items_dict[idx] = {"name": r["name"], "price": price, "qty": qty}
 
-                tot_bill = float(val[2].replace("₹", "").strip())
+                d_fee = delivery_fee(subtotal)
                 pdf = generate_pdf_receipt(
                     sale_id=s_id,
                     items_dict=items_dict,
                     subtotal=subtotal,
-                    delivery_fee=20.0,
+                    delivery_fee=d_fee,
                     total_amount=tot_bill,
                     customer_name=self.current_user["full_name"] if self.current_user else "Guest Customer",
                     customer_address=self.selected_locality,
@@ -1096,7 +1097,8 @@ class SnapKartCustomerApp(tk.Tk):
             self.load_products_from_db()
 
         except Exception as e:
-            conn.rollback()
+            if conn and conn.is_connected():
+                conn.rollback()
             messagebox.showerror("Checkout Error", f"Transaction failed: {e}")
         finally:
             if cursor is not None:

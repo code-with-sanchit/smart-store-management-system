@@ -165,18 +165,23 @@ def generate_pdf_receipt(
     story.append(Spacer(1, 10))
 
     # 3. Invoice Metadata & Customer Section
+    import html
+    esc_customer_name = html.escape(str(customer_name or "Guest Customer"))
+    esc_customer_address = html.escape(str(customer_address or "Main Street"))
+    esc_payment_method = html.escape(str(payment_method or "UPI"))
+
     now_str = datetime.now().strftime("%d %b %Y, %I:%M %p")
     meta_data = [
         [
-            Paragraph(f"<b>Invoice ID:</b> #SK-2026-{sale_id:06d}", styles["Normal"]),
+            Paragraph(f"<b>Invoice ID:</b> #SK-2026-{int(sale_id):06d}", styles["Normal"]),
             Paragraph(f"<b>Date & Time:</b> {now_str}", styles["Normal"])
         ],
         [
-            Paragraph(f"<b>Billed To:</b> {customer_name}", styles["Normal"]),
-            Paragraph(f"<b>Payment Mode:</b> {payment_method} (Completed)", styles["Normal"])
+            Paragraph(f"<b>Billed To:</b> {esc_customer_name}", styles["Normal"]),
+            Paragraph(f"<b>Payment Mode:</b> {esc_payment_method} (Completed)", styles["Normal"])
         ],
         [
-            Paragraph(f"<b>Delivery Address:</b> {customer_address}", styles["Normal"]),
+            Paragraph(f"<b>Delivery Address:</b> {esc_customer_address}", styles["Normal"]),
             Paragraph("<b>POS Terminal:</b> POS-Terminal-01", styles["Normal"])
         ]
     ]
@@ -207,22 +212,37 @@ def generate_pdf_receipt(
         ]
     ]
 
+    subtotal = max(0.0, float(subtotal))
+    delivery_fee = max(0.0, float(delivery_fee))
+    total_amount = max(0.0, float(total_amount))
+
     idx = 1
     total_taxable = subtotal / 1.05  # 5% GST inclusive calculation
     total_gst_amount = subtotal - total_taxable
     cgst_val = total_gst_amount / 2
     sgst_val = total_gst_amount / 2
 
+    item_name_style = ParagraphStyle(
+        "ItemNameStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10
+    )
+
     for item in items_dict.values():
-        item_total = item["price"] * item["qty"]
+        i_price = float(item["price"])
+        i_qty = int(item["qty"])
+        item_total = i_price * i_qty
         hsn_code = f"2106{idx % 89 + 10:02d}"
         tax_part = item_total * 0.05
+        esc_name = html.escape(str(item["name"]))
         table_data.append([
             str(idx),
-            item["name"],
+            Paragraph(esc_name, item_name_style),
             hsn_code,
-            str(item["qty"]),
-            f"{item['price']:.2f}",
+            str(i_qty),
+            f"{i_price:.2f}",
             f"{tax_part:.2f}",
             f"{item_total:.2f}"
         ])

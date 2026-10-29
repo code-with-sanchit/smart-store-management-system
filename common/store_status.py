@@ -44,17 +44,22 @@ def check_store_status():
         if record["is_closed_today"]:
             return False, f"The store is marked CLOSED for today ({current_day})."
 
-        # Convert timedelta to time object if MySQL returns a timedelta
-        open_time = record["open_time"]
-        close_time = record["close_time"]
+        # Safely convert to datetime.time whether returned as time, timedelta, or str
+        def _parse_time_val(val):
+            if isinstance(val, time):
+                return val
+            if isinstance(val, timedelta):
+                total_sec = int(val.total_seconds())
+                return time(total_sec // 3600, (total_sec % 3600) // 60, total_sec % 60)
+            if isinstance(val, str):
+                parts = [int(p) for p in val.split(":")[:3]]
+                while len(parts) < 3:
+                    parts.append(0)
+                return time(parts[0], parts[1], parts[2])
+            return time(0, 0, 0)
 
-        if isinstance(open_time, timedelta):
-            total_sec = int(open_time.total_seconds())
-            open_time = time(total_sec // 3600, (total_sec % 3600) // 60, total_sec % 60)
-
-        if isinstance(close_time, timedelta):
-            total_sec = int(close_time.total_seconds())
-            close_time = time(total_sec // 3600, (total_sec % 3600) // 60, total_sec % 60)
+        open_time = _parse_time_val(record["open_time"])
+        close_time = _parse_time_val(record["close_time"])
 
         # Compare current time with operating hours
         if open_time <= current_time <= close_time:

@@ -13,6 +13,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from database.db_connection import get_db_connection, ensure_core_schema
 from common.store_status import check_store_status
 from common.logo_utils import get_logo_image, set_window_icon
+from common.auth import hash_password
+from common.pdf_generator import open_pdf_file
 
 
 class SnapKartModernDashboard(tk.Tk):
@@ -550,10 +552,12 @@ class SnapKartModernDashboard(tk.Tk):
             if conn:
                 try:
                     c = conn.cursor(dictionary=True)
-                    c.execute("SELECT customer_id, full_name, email, phone, DATE_FORMAT(created_at, '%Y-%m-%d %h:%i %p') AS reg_date FROM customers ORDER BY customer_id DESC;")
+                    c.execute("SELECT customer_id, full_name, email, phone, created_at FROM customers ORDER BY customer_id DESC;")
                     rows = c.fetchall()
                     for r in rows:
-                        c_tree.insert("", tk.END, values=(r["customer_id"], r["full_name"], r["email"], r["phone"], r["reg_date"]))
+                        c_dt = r.get("created_at")
+                        reg_date = c_dt.strftime("%Y-%m-%d %I:%M %p") if isinstance(c_dt, datetime) else str(c_dt or "")
+                        c_tree.insert("", tk.END, values=(r["customer_id"], r["full_name"], r["email"], r["phone"], reg_date))
                     c.close()
                     conn.close()
                 except Exception as e:
@@ -602,7 +606,8 @@ class SnapKartModernDashboard(tk.Tk):
                 if conn:
                     try:
                         c = conn.cursor()
-                        c.execute("INSERT INTO customers (full_name, email, phone, password_hash) VALUES (%s, %s, %s, 'hashed_pw')", (nm, em, ph))
+                        pwd_hash = hash_password("Customer@123")
+                        c.execute("INSERT INTO customers (full_name, email, phone, password_hash) VALUES (%s, %s, %s, %s)", (nm, em, ph, pwd_hash))
                         conn.commit()
                         c.close()
                         conn.close()
@@ -803,12 +808,12 @@ class SnapKartModernDashboard(tk.Tk):
         def open_receipts_dir():
             r_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "receipts")
             os.makedirs(r_dir, exist_ok=True)
-            os.startfile(r_dir)
+            open_pdf_file(r_dir)
 
         def open_reports_dir():
             rep_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
             os.makedirs(rep_dir, exist_ok=True)
-            os.startfile(rep_dir)
+            open_pdf_file(rep_dir)
 
         tk.Button(bot_bar, text="📂 Open Receipts Folder", font=("Segoe UI", 9), padx=10, pady=4, cursor="hand2", command=open_receipts_dir).pack(side=tk.LEFT, padx=4)
         tk.Button(bot_bar, text="📂 Open Reports Folder", font=("Segoe UI", 9), padx=10, pady=4, cursor="hand2", command=open_reports_dir).pack(side=tk.LEFT, padx=4)
@@ -1125,7 +1130,7 @@ class SnapKartModernDashboard(tk.Tk):
 
             # Recent Transactions
             cursor.execute("""
-                SELECT sale_id, DATE_FORMAT(sale_datetime, '%%Y-%%m-%%d %%h:%%i %%p') AS s_time, 
+                SELECT sale_id, sale_datetime, 
                        total_amount, payment_method 
                 FROM sales 
                 ORDER BY sale_datetime DESC 
@@ -1137,9 +1142,11 @@ class SnapKartModernDashboard(tk.Tk):
                 self.trans_tree.delete(r)
 
             for s in recent_sales:
+                s_dt = s.get("sale_datetime")
+                s_time = s_dt.strftime("%Y-%m-%d %I:%M %p") if isinstance(s_dt, datetime) else str(s_dt or "")
                 self.trans_tree.insert("", tk.END, values=(
                     f"#{s['sale_id']}",
-                    s["s_time"],
+                    s_time,
                     f"₹{float(s['total_amount']):.2f}",
                     s.get("payment_method") or "Cash",
                     "Completed"

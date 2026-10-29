@@ -154,7 +154,7 @@ class TransactionsFrame(ttk.Frame):
             search_txt = self.search_var.get().strip()
 
             query = """
-                SELECT s.sale_id, DATE_FORMAT(s.sale_datetime, '%Y-%m-%d %h:%i %p') AS s_time,
+                SELECT s.sale_id, s.sale_datetime,
                        s.total_amount, s.payment_method,
                        COALESCE(c.full_name, 'Guest Customer') AS customer_name
                 FROM sales s
@@ -172,9 +172,11 @@ class TransactionsFrame(ttk.Frame):
             sales = cursor.fetchall()
             
             for s in sales:
+                s_dt = s.get("sale_datetime")
+                s_time = s_dt.strftime("%Y-%m-%d %I:%M %p") if isinstance(s_dt, datetime) else str(s_dt or "")
                 self.sales_tree.insert("", tk.END, values=(
                     s["sale_id"],
-                    s["s_time"],
+                    s_time,
                     s["customer_name"],
                     f"₹ {float(s['total_amount']):.2f}",
                     s["payment_method"] or "UPI"
@@ -285,8 +287,8 @@ class TransactionsFrame(ttk.Frame):
                 "qty": qty
             }
 
-        delivery_fee = 20.0
-        total_amount = self.selected_sale_meta["total_amount"]
+        total_amount = float(self.selected_sale_meta["total_amount"])
+        delivery_fee = max(0.0, round(total_amount - subtotal, 2))
 
         # Generate and open PDF
         pdf_path = generate_pdf_receipt(
