@@ -19,6 +19,18 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 from common.logo_utils import get_logo_path
 
+
+def _draw_report_footer(canvas, document):
+    """Keep page context on printed or multi-page management reports."""
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
+    canvas.line(document.leftMargin, 20, A4[0] - document.rightMargin, 20)
+    canvas.setFont("Helvetica", 7)
+    canvas.setFillColor(colors.HexColor("#64748b"))
+    canvas.drawString(document.leftMargin, 11, "SnapKart • Confidential internal business report")
+    canvas.drawRightString(A4[0] - document.rightMargin, 11, f"Page {document.page}")
+    canvas.restoreState()
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import (
@@ -223,7 +235,7 @@ def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: p
         ParagraphStyle("FooterNotice", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=8, textColor=colors.HexColor("#94a3b8"), alignment=1)
     ))
 
-    doc.build(story)
+    doc.build(story, onFirstPage=_draw_report_footer, onLaterPages=_draw_report_footer)
     return pdf_path
 
 
