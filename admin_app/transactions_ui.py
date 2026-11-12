@@ -10,11 +10,13 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
 from common.logo_utils import get_logo_image
+from common.theme import apply_desktop_theme
 
 
 class TransactionsFrame(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        apply_desktop_theme(self.winfo_toplevel())
         self.pack(fill=tk.BOTH, expand=True, padx=15, pady=12)
 
         self.selected_sale_id = None
