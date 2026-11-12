@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 from common.logo_utils import get_logo_image
 from common.ui import Debouncer
+from common.theme import apply_desktop_theme
 
 
 class InventoryFrame(ttk.Frame):
@@ -21,6 +22,7 @@ class InventoryFrame(ttk.Frame):
     """
     def __init__(self, parent, filter_mode="all"):
         super().__init__(parent)
+        apply_desktop_theme(self.winfo_toplevel())
         self.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         self.filter_mode = filter_mode  # "all", "low_stock", or "stock_mgmt"
