@@ -21,6 +21,18 @@ from reportlab.graphics.barcode import qr
 from common.logo_utils import get_logo_path
 
 
+def _draw_invoice_footer(canvas, document):
+    """Add a small repeatable footer to every invoice page."""
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
+    canvas.line(document.leftMargin, 20, A4[0] - document.rightMargin, 20)
+    canvas.setFont("Helvetica", 7)
+    canvas.setFillColor(colors.HexColor("#64748b"))
+    canvas.drawString(document.leftMargin, 11, "SnapKart • Computer-generated sales invoice")
+    canvas.drawRightString(A4[0] - document.rightMargin, 11, f"Page {document.page}")
+    canvas.restoreState()
+
+
 def generate_pdf_receipt(
     sale_id,
     items_dict,
@@ -344,7 +356,7 @@ def generate_pdf_receipt(
     story.append(Spacer(1, 2))
     story.append(Paragraph("<i>This is a computer-generated GST Tax Invoice under Rule 46 of CGST Rules 2017. Does not require physical signature.</i>", footer_text))
 
-    doc.build(story)
+    doc.build(story, onFirstPage=_draw_invoice_footer, onLaterPages=_draw_invoice_footer)
     return pdf_path
 
 
