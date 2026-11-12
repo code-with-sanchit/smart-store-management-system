@@ -155,7 +155,7 @@ class TransactionsFrame(ttk.Frame):
 
             query = """
                 SELECT s.sale_id, s.sale_datetime,
-                       s.total_amount, s.payment_method,
+                       s.total_amount, s.payment_method, s.delivery_fee, s.discount_amount,
                        COALESCE(c.full_name, 'Guest Customer') AS customer_name
                 FROM sales s
                 LEFT JOIN customers c ON s.customer_id = c.customer_id
@@ -217,7 +217,8 @@ class TransactionsFrame(ttk.Frame):
         try:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT i.name, si.quantity, si.unit_price, si.subtotal
+                SELECT COALESCE(si.product_name, i.name, 'Removed product') AS name,
+                       si.quantity, si.unit_price, si.subtotal
                 FROM sale_items si
                 JOIN inventory i ON si.item_id = i.item_id
                 WHERE si.sale_id = %s;
@@ -255,7 +256,8 @@ class TransactionsFrame(ttk.Frame):
         try:
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT i.name, si.quantity, si.unit_price
+                SELECT COALESCE(si.product_name, i.name, 'Removed product') AS name,
+                       si.quantity, si.unit_price
                 FROM sale_items si
                 JOIN inventory i ON si.item_id = i.item_id
                 WHERE si.sale_id = %s;
@@ -288,7 +290,25 @@ class TransactionsFrame(ttk.Frame):
             }
 
         total_amount = float(self.selected_sale_meta["total_amount"])
-        delivery_fee = max(0.0, round(total_amount - subtotal, 2))
+        cursor = None
+        conn = get_db_connection()
+        if not conn:
+            messagebox.showerror("Error", "Could not load invoice totals.")
+            return
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT delivery_fee, discount_amount FROM sales WHERE sale_id = %s", (self.selected_sale_id,)
+            )
+            invoice_totals = cursor.fetchone() or {}
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+        delivery_fee = float(invoice_totals.get("delivery_fee") or 0)
+        discount_amount = float(invoice_totals.get("discount_amount") or 0)
 
         # Generate and open PDF
         pdf_path = generate_pdf_receipt(
@@ -297,6 +317,7 @@ class TransactionsFrame(ttk.Frame):
             subtotal=subtotal,
             delivery_fee=delivery_fee,
             total_amount=total_amount,
+            discount_amount=discount_amount,
             customer_name=self.selected_sale_meta["customer_name"],
             payment_method=self.selected_sale_meta["payment_method"]
         )

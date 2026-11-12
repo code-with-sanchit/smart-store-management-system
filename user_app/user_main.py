@@ -359,7 +359,8 @@ class SnapKartCustomerApp(tk.Tk):
             if conn:
                 c = conn.cursor(dictionary=True)
                 c.execute("""
-                    SELECT i.name, si.quantity, si.unit_price
+                    SELECT COALESCE(si.product_name, i.name, 'Removed product') AS name,
+                           si.quantity, si.unit_price
                     FROM sale_items si
                     JOIN inventory i ON si.item_id = i.item_id
                     WHERE si.sale_id = %s;
