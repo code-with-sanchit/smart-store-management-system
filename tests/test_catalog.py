@@ -1,6 +1,6 @@
 import unittest
 
-from database.curated_catalog import CURATED_CATALOG
+from database.curated_catalog import CURATED_CATALOG, validate_catalog
 from database.populate_inventory import generate_items
 
 
@@ -13,3 +13,6 @@ class CatalogTests(unittest.TestCase):
 
     def test_catalog_is_not_randomized_between_runs(self):
         self.assertEqual(generate_items(12), generate_items(12))
+
+    def test_curated_catalog_passes_its_quality_checks(self):
+        self.assertEqual(validate_catalog(), [])
