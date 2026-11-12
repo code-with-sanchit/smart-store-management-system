@@ -15,7 +15,7 @@ CATALOG_DIR = ASSETS_DIR / "catalog"
 for directory in (ASSETS_DIR, ITEMS_DIR, CATALOG_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 
-_TK_IMAGE_CACHE: dict[tuple[int, tuple[int, int]], ImageTk.PhotoImage] = {}
+_TK_IMAGE_CACHE: dict[tuple[int, str, str, tuple[int, int]], ImageTk.PhotoImage] = {}
 _IMAGE_EXTENSIONS = (".webp", ".png", ".jpg", ".jpeg")
 
 
@@ -66,7 +66,9 @@ def get_product_image(item_id: int | str, item_name: str, category: str, size: t
     except (ValueError, TypeError):
         numeric_id = 0
 
-    cache_key = (numeric_id, size)
+    # Include the name/category so editing an item in the admin panel does not
+    # keep showing a stale image merely because its database ID stayed the same.
+    cache_key = (numeric_id, item_name, category, size)
     if cache_key in _TK_IMAGE_CACHE:
         return _TK_IMAGE_CACHE[cache_key]
 
