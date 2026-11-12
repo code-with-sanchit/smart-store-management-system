@@ -114,7 +114,7 @@ class SnapKartCustomerApp(tk.Tk):
         lbl_brand.pack(side=tk.LEFT)
         lbl_brand.bind("<Button-1>", lambda e: self.show_home_view())
 
-        lbl_tag = tk.Label(brand_box, text="Your Neighbourhood Store, Online", font=("Segoe UI", 7), fg=self.COLOR_MUTED, bg=self.COLOR_WHITE)
+        lbl_tag = tk.Label(brand_box, text="Your Neighbourhood Store", font=("Segoe UI", 7), fg=self.COLOR_MUTED, bg=self.COLOR_WHITE)
         lbl_tag.pack(anchor="w")
         lbl_tag.bind("<Button-1>", lambda e: self.show_home_view())
 
