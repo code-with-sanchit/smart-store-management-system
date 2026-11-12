@@ -119,7 +119,7 @@ def generate_pdf_receipt(
                 [
                     Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", brand_title_style),
                     Spacer(1, 2),
-                    Paragraph("Your Neighbourhood Store, Online", brand_sub_style)
+                    Paragraph("Your Neighbourhood Store", brand_sub_style)
                 ],
                 Paragraph(
                     "<b>SnapKart Flagship Superstore</b><br/>"
@@ -150,7 +150,7 @@ def generate_pdf_receipt(
                 )
             ],
             [
-                Paragraph("Your Neighbourhood Store, Online", brand_sub_style),
+                Paragraph("Your Neighbourhood Store", brand_sub_style),
                 ""
             ]
         ]
