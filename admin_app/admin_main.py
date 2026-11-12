@@ -15,6 +15,7 @@ from common.store_status import check_store_status
 from common.logo_utils import get_logo_image, set_window_icon
 from common.auth import hash_password
 from common.pdf_generator import open_pdf_file
+from common.theme import apply_desktop_theme
 
 
 class SnapKartModernDashboard(tk.Tk):
@@ -28,6 +29,7 @@ class SnapKartModernDashboard(tk.Tk):
         self.geometry("1440x900")
         self.minsize(1250, 780)
         self.configure(bg="#0f172a")
+        apply_desktop_theme(self)
 
         # Set official window icon
         set_window_icon(self)
