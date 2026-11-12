@@ -8,7 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from database.db_connection import get_db_connection
-from database.curated_catalog import starter_products
+from database.curated_catalog import starter_products, validate_catalog
 
 random.seed(42)  # Deterministic seed for reproducible product catalog
 
@@ -361,6 +361,9 @@ def generate_items(target_count=600):
 
 
 def insert_bulk_inventory(target_count=None, replace=False):
+    issues = validate_catalog()
+    if issues:
+        raise ValueError("Curated catalog is invalid: " + "; ".join(issues))
     conn = get_db_connection()
     if not conn:
         print("Database connection failed. Please check db_connection.py.")
