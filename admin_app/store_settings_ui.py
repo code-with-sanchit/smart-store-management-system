@@ -10,11 +10,13 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 from common.store_status import check_store_status
 from common.logo_utils import get_logo_image
+from common.theme import apply_desktop_theme
 
 
 class StoreSettingsFrame(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        apply_desktop_theme(self.winfo_toplevel())
         self.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
 
         self.day_entries = {}
