@@ -11,6 +11,7 @@ from common.pdf_generator import generate_pdf_receipt, open_pdf_file
 from common.image_loader import get_product_image
 from common.logo_utils import get_logo_image, set_window_icon
 from common.pricing import delivery_fee
+from common.sales import SaleError, calculate_sale_totals, record_sale
 from common.ui import Debouncer
 from user_app.auth_ui import AuthDialog
 from user_app.upi_payment_dialog import UPIPaymentDialog
@@ -1004,9 +1005,9 @@ class SnapKartCustomerApp(tk.Tk):
                 AuthDialog(self, on_login_success=self.on_user_logged_in)
                 return
 
-        subtotal = sum(i["price"] * i["qty"] for i in self.cart.values())
-        shipping = delivery_fee(subtotal)
-        total_bill = subtotal + shipping
+        raw_subtotal = sum(i["price"] * i["qty"] for i in self.cart.values())
+        totals = calculate_sale_totals(self.cart, delivery_fee=delivery_fee(raw_subtotal))
+        subtotal, shipping, total_bill = totals.subtotal, totals.delivery_fee, totals.total
         cust_name = self.current_user["full_name"] if self.current_user else "Guest Customer"
 
         # Open Simulated UPI Gateway
@@ -1025,34 +1026,9 @@ class SnapKartCustomerApp(tk.Tk):
 
         cursor = None
         try:
-            cursor = conn.cursor()
-            now = datetime.now()
             cust_id = self.current_user["customer_id"] if self.current_user else None
-
-            # Insert Sale Record
-            cursor.execute(
-                "INSERT INTO sales (sale_datetime, total_amount, payment_method, customer_id) VALUES (%s, %s, %s, %s)",
-                (now, total_bill, "UPI", cust_id)
-            )
-            sale_id = cursor.lastrowid
-
-            # Reserve stock first so concurrent orders cannot oversell an item.
-            for p_id, item in self.cart.items():
-                cursor.execute(
-                    "UPDATE inventory SET stock_quantity = stock_quantity - %s "
-                    "WHERE item_id = %s AND stock_quantity >= %s",
-                    (item["qty"], p_id, item["qty"])
-                )
-                if cursor.rowcount != 1:
-                    raise ValueError(f"{item['name']} is no longer available in the requested quantity.")
-
-                item_sub = item["price"] * item["qty"]
-                cursor.execute(
-                    "INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal) VALUES (%s, %s, %s, %s, %s)",
-                    (sale_id, p_id, item["qty"], item["price"], item_sub)
-                )
-
-            conn.commit()
+            totals = calculate_sale_totals(self.cart, delivery_fee=shipping)
+            sale_id = record_sale(conn, self.cart, totals, "UPI", customer_id=cust_id, order_channel="delivery")
 
             full_addr = f"{self.selected_house_address}, {self.selected_locality}"
 
@@ -1060,9 +1036,9 @@ class SnapKartCustomerApp(tk.Tk):
             default_pdf = generate_pdf_receipt(
                 sale_id=sale_id,
                 items_dict=self.cart,
-                subtotal=subtotal,
-                delivery_fee=shipping,
-                total_amount=total_bill,
+                subtotal=totals.subtotal,
+                delivery_fee=totals.delivery_fee,
+                total_amount=totals.total,
                 customer_name=cust_name,
                 customer_address=full_addr,
                 payment_method="UPI"

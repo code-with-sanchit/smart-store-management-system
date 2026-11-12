@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
+from common.sales import SaleError, calculate_sale_totals, record_sale
 from common.ui import Debouncer
 from common.logo_utils import get_logo_image
 
@@ -368,20 +369,18 @@ class BillingPOSFrame(ttk.Frame):
         self.recalculate_totals()
 
     def recalculate_totals(self):
-        subtotal = sum(d["price"] * d["qty"] for d in self.bill_items.values())
-        gst = round(subtotal * 0.05 / 1.05, 2)
-
         try:
             discount = float(self.discount_var.get())
-            if discount < 0:
-                discount = 0.0
         except ValueError:
             discount = 0.0
-
-        grand_total = max(0.0, subtotal - discount)
-        self.lbl_subtotal.config(text=f"Subtotal: ₹ {subtotal:.2f}")
+        try:
+            totals = calculate_sale_totals(self.bill_items, discount=discount)
+        except SaleError:
+            totals = calculate_sale_totals(self.bill_items)
+        gst = float(totals.subtotal * 5 / 105)
+        self.lbl_subtotal.config(text=f"Subtotal: ₹ {totals.subtotal:.2f}")
         self.lbl_tax.config(text=f"GST (5% incl): ₹ {gst:.2f}")
-        self.lbl_grand_total.config(text=f"Grand Total: ₹ {grand_total:.2f}")
+        self.lbl_grand_total.config(text=f"Grand Total: ₹ {totals.total:.2f}")
 
     # --- Sale Execution & Invoice Generation ---
     def complete_sale_and_print(self):
@@ -393,12 +392,16 @@ class BillingPOSFrame(ttk.Frame):
         cust_phone = self.entry_cust_phone.get().strip()
         pay_mode = self.pay_mode_var.get()
 
-        subtotal = sum(d["price"] * d["qty"] for d in self.bill_items.values())
         try:
             discount = float(self.discount_var.get())
         except ValueError:
-            discount = 0.0
-        grand_total = max(0.0, subtotal - discount)
+            messagebox.showerror("Invalid Discount", "Enter the discount as a valid amount.")
+            return
+        try:
+            totals = calculate_sale_totals(self.bill_items, discount=discount)
+        except SaleError as error:
+            messagebox.showerror("Invalid Sale", str(error))
+            return
 
         conn = get_db_connection()
         if not conn:
@@ -406,33 +409,7 @@ class BillingPOSFrame(ttk.Frame):
             return
 
         try:
-            cursor = conn.cursor()
-
-            # 1. Insert into sales table
-            cursor.execute("""
-                INSERT INTO sales (customer_id, total_amount, payment_method, sale_datetime)
-                VALUES (NULL, %s, %s, NOW());
-            """, (grand_total, pay_mode))
-            sale_id = cursor.lastrowid
-
-            # 2. Reserve stock and write the sale as one transaction.
-            for item_id, item in self.bill_items.items():
-                cursor.execute(
-                    "UPDATE inventory SET stock_quantity = stock_quantity - %s "
-                    "WHERE item_id = %s AND stock_quantity >= %s",
-                    (item["qty"], item_id, item["qty"])
-                )
-                if cursor.rowcount != 1:
-                    raise ValueError(f"{item['name']} no longer has enough stock.")
-
-                item_subtotal = round(float(item["qty"]) * float(item["price"]), 2)
-                cursor.execute("""
-                    INSERT INTO sale_items (sale_id, item_id, quantity, unit_price, subtotal)
-                    VALUES (%s, %s, %s, %s, %s);
-                """, (sale_id, item_id, item["qty"], item["price"], item_subtotal))
-
-
-            conn.commit()
+            sale_id = record_sale(conn, self.bill_items, totals, pay_mode, order_channel="store")
 
             self.last_sale_id = sale_id
 
@@ -440,9 +417,10 @@ class BillingPOSFrame(ttk.Frame):
             pdf_path = generate_pdf_receipt(
                 sale_id=sale_id,
                 items_dict=self.bill_items,
-                subtotal=subtotal,
+                subtotal=totals.subtotal,
                 delivery_fee=0.0,
-                total_amount=grand_total,
+                total_amount=totals.total,
+                discount_amount=totals.discount,
                 customer_name=cust_name,
                 customer_address="SnapKart In-Store Retail Counter",
                 payment_method=pay_mode
@@ -452,7 +430,7 @@ class BillingPOSFrame(ttk.Frame):
                 "Sale Completed Successfully",
                 f"✅ Invoice #{sale_id} generated successfully!\n\n"
                 f"Customer: {cust_name}\n"
-                f"Total Amount: ₹ {grand_total:.2f}\n"
+                f"Total Amount: ₹ {totals.total:.2f}\n"
                 f"Payment Mode: {pay_mode}\n\n"
                 f"Receipt saved to:\n{pdf_path}"
             )
