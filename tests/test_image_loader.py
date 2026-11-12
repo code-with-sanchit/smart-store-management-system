@@ -15,6 +15,12 @@ class ImageLoaderTests(unittest.TestCase):
         self.assertTrue(cat_file.is_file())
         self.assertIn("dairy_milk_and_paneer", cat_file.name)
 
+    def test_curated_item_art_takes_priority_over_its_category(self):
+        item_name = "Amul Butter 500 g"
+        path = _find_image(item_id=0, item_name=item_name, category="Dairy, Milk & Paneer")
+        self.assertIsNotNone(path)
+        self.assertIn(product_image_key(item_name), path.name)
+
     def test_get_product_image_handles_invalid_ids(self):
         photo = get_product_image("invalid_id", "Test Item", "Nonexistent Category")
         # May be PhotoImage or None if Tk not initialized
