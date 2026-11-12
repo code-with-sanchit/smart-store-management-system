@@ -21,7 +21,7 @@ if env_file.is_file():
 ROOT_CONFIG = {
     'host': os.environ.get('SNAPKART_DB_HOST', 'localhost'),
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
-    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', 'Sanc@2007'))
+    'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', ''))
 }
 
 

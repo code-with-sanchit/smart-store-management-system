@@ -28,7 +28,9 @@ _load_dotenv()
 DB_CONFIG = {
     'host': os.environ.get('SNAPKART_DB_HOST', 'localhost'),
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
-    'password': os.environ.get('SNAPKART_DB_PASSWORD', 'Sanc@2007'),
+    # Do not ship a database password in source code. An empty password is a
+    # valid local MySQL setup; production installations should always use .env.
+    'password': os.environ.get('SNAPKART_DB_PASSWORD', ''),
     'database': os.environ.get('SNAPKART_DB_NAME', 'smart_store_db'),
     'autocommit': False,
     'connection_timeout': 5,
