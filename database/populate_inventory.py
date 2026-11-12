@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from database.db_connection import get_db_connection
+from database.curated_catalog import starter_products
 
 random.seed(42)  # Deterministic seed for reproducible product catalog
 
@@ -348,19 +349,18 @@ def build_all_items():
 
 
 def generate_items(target_count=600):
-    all_items = build_all_items()
-    print(f"Total generated unique products: {len(all_items)}")
+    """Select predictable shelf-ready products without inventing product variants."""
+    items = starter_products()
+    if target_count is None:
+        return items
+    if target_count <= 0:
+        return []
+    if target_count < len(items):
+        return items[:target_count]
+    return items
 
-    if target_count > len(all_items):
-        chosen = all_items
-    else:
-        chosen = random.sample(all_items, target_count)
 
-    chosen.sort(key=lambda x: (x[1], x[0]))
-    return chosen
-
-
-def insert_bulk_inventory(target_count=600, replace=False):
+def insert_bulk_inventory(target_count=None, replace=False):
     conn = get_db_connection()
     if not conn:
         print("Database connection failed. Please check db_connection.py.")
@@ -378,11 +378,9 @@ def insert_bulk_inventory(target_count=600, replace=False):
             return
 
         if replace:
-            cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-            cursor.execute("TRUNCATE TABLE sale_items;")
-            cursor.execute("TRUNCATE TABLE sales;")
-            cursor.execute("TRUNCATE TABLE inventory;")
-            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+            cursor.execute("DELETE FROM sale_items;")
+            cursor.execute("DELETE FROM sales;")
+            cursor.execute("DELETE FROM inventory;")
 
         items = generate_items(target_count)
 
@@ -405,7 +403,7 @@ def insert_bulk_inventory(target_count=600, replace=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed a balanced SnapKart demo catalogue.")
-    parser.add_argument("--count", type=int, default=600, help="number of products to add to an empty catalogue")
+    parser.add_argument("--count", type=int, help="optional cap on the curated starter catalogue")
     parser.add_argument("--replace", action="store_true", help="clear sales and inventory before loading demo data")
     args = parser.parse_args()
     insert_bulk_inventory(target_count=args.count, replace=args.replace)
