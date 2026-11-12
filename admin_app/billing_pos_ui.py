@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 from common.pdf_generator import generate_pdf_receipt, open_pdf_file
 from common.sales import SaleError, calculate_sale_totals, record_sale
+from common.theme import apply_desktop_theme
 from common.ui import Debouncer
 from common.logo_utils import get_logo_image
 
@@ -24,6 +25,7 @@ class BillingPOSFrame(ttk.Frame):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        apply_desktop_theme(self.winfo_toplevel())
         self.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
 
         self.bill_items = {}  # {item_id: {"name": str, "price": float, "qty": int, "max_stock": int}}
