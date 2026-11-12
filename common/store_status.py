@@ -9,6 +9,13 @@ if str(PROJECT_ROOT) not in sys.path:
 from database.db_connection import get_db_connection
 
 
+def is_time_in_window(current: time, opening: time, closing: time) -> bool:
+    """Check normal and overnight operating-hour windows inclusively."""
+    if opening <= closing:
+        return opening <= current <= closing
+    return current >= opening or current <= closing
+
+
 def check_store_status():
     """
     Checks if the store is currently open based on MySQL 'store_hours' table
@@ -62,7 +69,7 @@ def check_store_status():
         close_time = _parse_time_val(record["close_time"])
 
         # Compare current time with operating hours
-        if open_time <= current_time <= close_time:
+        if is_time_in_window(current_time, open_time, close_time):
             return True, f"Store is OPEN. Operating hours today ({current_day}): {open_time.strftime('%I:%M %p')} - {close_time.strftime('%I:%M %p')}."
         else:
             return False, f"Store is CLOSED right now. Today's hours ({current_day}): {open_time.strftime('%I:%M %p')} to {close_time.strftime('%I:%M %p')}."
