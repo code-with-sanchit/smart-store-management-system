@@ -43,13 +43,18 @@ def _find_image(item_id: int, item_name: str, category: str = "") -> Path | None
     return None
 
 
-def _unavailable_photo(size: tuple[int, int]) -> ImageTk.PhotoImage | None:
+def unavailable_image_message(item_name: str) -> str:
+    """Keep a missing-image card useful without pretending it is a product photo."""
+    return f"Image unavailable\n{item_name[:30]}" if item_name else "Product image unavailable"
+
+
+def _unavailable_photo(size: tuple[int, int], item_name: str = "") -> ImageTk.PhotoImage | None:
     """Use an honest unavailable state if no photo exists."""
     try:
         image = Image.new("RGBA", size, "#f8fafc")
         draw = ImageDraw.Draw(image)
         draw.rectangle((0, 0, size[0] - 1, size[1] - 1), outline="#cbd5e1", width=1)
-        draw.text((16, max(12, size[1] // 2 - 8)), "Product photo unavailable", fill="#64748b")
+        draw.multiline_text((16, max(12, size[1] // 2 - 16)), unavailable_image_message(item_name), fill="#64748b", spacing=3)
         return ImageTk.PhotoImage(image)
     except Exception:
         return None
@@ -86,7 +91,7 @@ def get_product_image(item_id: int | str, item_name: str, category: str, size: t
         except Exception as error:
             print(f"Could not render product image {target_file}: {error}")
 
-    photo = _unavailable_photo(size)
+    photo = _unavailable_photo(size, item_name)
     if photo is not None:
         _TK_IMAGE_CACHE[cache_key] = photo
     return photo
