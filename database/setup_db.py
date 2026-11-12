@@ -1,7 +1,9 @@
 import os
+import re
 from pathlib import Path
 import mysql.connector
 from mysql.connector import Error
+from database.db_connection import ensure_core_schema
 
 # Load .env if present
 env_file = Path(__file__).resolve().parent.parent / ".env"
@@ -23,6 +25,7 @@ ROOT_CONFIG = {
     'user': os.environ.get('SNAPKART_DB_USER', 'root'),
     'password': os.environ.get('SNAPKART_DB_PASSWORD', os.environ.get('SNAPKART_DB_PASSW', ''))
 }
+DATABASE_NAME = os.environ.get("SNAPKART_DB_NAME", "smart_store_db")
 
 
 def create_database_and_tables():
@@ -33,9 +36,11 @@ def create_database_and_tables():
         cursor = conn.cursor()
 
         # Create Database
-        cursor.execute("CREATE DATABASE IF NOT EXISTS smart_store_db;")
-        cursor.execute("USE smart_store_db;")
-        print("Database 'smart_store_db' created/selected successfully.")
+        if not re.fullmatch(r"[A-Za-z0-9_]+", DATABASE_NAME):
+            raise ValueError("SNAPKART_DB_NAME may contain only letters, numbers, and underscores.")
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{DATABASE_NAME}`;")
+        cursor.execute(f"USE `{DATABASE_NAME}`;")
+        print(f"Database '{DATABASE_NAME}' created/selected successfully.")
 
         # Create store_hours Table
         cursor.execute("""
@@ -118,6 +123,7 @@ def create_database_and_tables():
 
         conn.commit()
         print("All tables created successfully!")
+        ensure_core_schema()
 
     except Error as e:
         print(f"Error during setup: {e}")
