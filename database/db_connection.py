@@ -94,6 +94,38 @@ def ensure_core_schema():
         );
         """)
 
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS inventory (
+            item_id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(150) NOT NULL,
+            category VARCHAR(80) NOT NULL,
+            price DECIMAL(10, 2) NOT NULL,
+            stock_quantity INT NOT NULL
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            sale_id INT AUTO_INCREMENT PRIMARY KEY,
+            sale_datetime DATETIME NOT NULL,
+            total_amount DECIMAL(10, 2) NOT NULL,
+            payment_method VARCHAR(50) DEFAULT 'Cash',
+            customer_id INT NULL
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sale_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            sale_id INT NOT NULL,
+            item_id INT NOT NULL,
+            quantity INT NOT NULL,
+            unit_price DECIMAL(10, 2) NOT NULL,
+            subtotal DECIMAL(10, 2) NOT NULL,
+            CONSTRAINT fk_items_sale FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE CASCADE
+        );
+        """)
+
         # Upgrade password_hash column if existing table had VARCHAR(64)
         cursor.execute("""
             SELECT CHARACTER_MAXIMUM_LENGTH
@@ -129,6 +161,34 @@ def ensure_core_schema():
         """, (db_name,))
         if cursor.fetchone()["col_exists"] == 0:
             cursor.execute("ALTER TABLE sales ADD COLUMN customer_id INT NULL;")
+
+        for column_name, definition in (
+            ("order_channel", "VARCHAR(20) NOT NULL DEFAULT 'store'"),
+            ("delivery_fee", "DECIMAL(10, 2) NOT NULL DEFAULT 0"),
+            ("discount_amount", "DECIMAL(10, 2) NOT NULL DEFAULT 0"),
+        ):
+            cursor.execute("""
+                SELECT COUNT(*) AS col_exists
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'sales' AND COLUMN_NAME = %s;
+            """, (db_name, column_name))
+            if cursor.fetchone()["col_exists"] == 0:
+                cursor.execute(f"ALTER TABLE sales ADD COLUMN {column_name} {definition};")
+
+        cursor.execute("""
+            SELECT COUNT(*) AS col_exists
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'sale_items' AND COLUMN_NAME = 'product_name';
+        """, (db_name,))
+        if cursor.fetchone()["col_exists"] == 0:
+            cursor.execute("ALTER TABLE sale_items ADD COLUMN product_name VARCHAR(150) NULL;")
+            cursor.execute("""
+                UPDATE sale_items si
+                JOIN inventory i ON i.item_id = si.item_id
+                SET si.product_name = i.name
+                WHERE si.product_name IS NULL;
+            """)
+            cursor.execute("ALTER TABLE sale_items MODIFY COLUMN product_name VARCHAR(150) NOT NULL;")
 
         # Ensure FK constraint (ignore if it already exists)
         try:

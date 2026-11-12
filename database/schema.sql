@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS inventory (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     category VARCHAR(80) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    stock_quantity INT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
+    stock_quantity INT NOT NULL CHECK (stock_quantity >= 0),
     INDEX idx_category (category),
     INDEX idx_name (name),
     INDEX idx_catalog_category_stock (category, stock_quantity, item_id),
@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS sales (
     total_amount DECIMAL(10, 2) NOT NULL,
     payment_method VARCHAR(50) DEFAULT 'UPI',
     customer_id INT NULL,
+    order_channel VARCHAR(20) NOT NULL DEFAULT 'store',
+    delivery_fee DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
     CONSTRAINT fk_sales_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
     INDEX idx_sale_datetime (sale_datetime)
 );
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     sale_id INT NOT NULL,
     item_id INT NOT NULL,
+    product_name VARCHAR(150) NOT NULL,
     quantity INT NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL,
     subtotal DECIMAL(10, 2) NOT NULL,
