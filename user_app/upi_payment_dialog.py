@@ -1,4 +1,5 @@
 import tkinter as tk
+import re
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 
@@ -11,11 +12,16 @@ except ImportError:
     HAS_QRCODE = False
 
 
+def is_valid_upi_id(value: str) -> bool:
+    """Perform a small local format check; this does not verify a bank account."""
+    return bool(re.fullmatch(r"[A-Za-z0-9._-]{2,}@[A-Za-z0-9._-]{2,}", value.strip()))
+
+
 class UPIPaymentDialog(tk.Toplevel):
     def __init__(self, parent, total_amount, customer_name, on_payment_success):
         super().__init__(parent)
 
-        self.title("SnapKart - UPI Payment Gateway")
+        self.title("SnapKart - UPI Payment Confirmation")
         self.geometry("420x580")
         self.resizable(False, False)
         self.configure(bg="#ffffff")
@@ -57,7 +63,7 @@ class UPIPaymentDialog(tk.Toplevel):
 
         tk.Label(
             header,
-            text="Scan QR code or enter your UPI Virtual Payment Address",
+            text="Use your UPI app, then confirm the payment in this demo",
             font=("Segoe UI", 8),
             fg="#dcfce7",
             bg="#16a34a"
@@ -84,7 +90,7 @@ class UPIPaymentDialog(tk.Toplevel):
 
         tk.Label(
             self,
-            text="UPI ID: snapkart@upi  |  Agra Superstore",
+            text="Demo UPI ID: snapkart@upi  |  Payment is not bank-verified",
             font=("Segoe UI", 8, "bold"),
             fg="#334155",
             bg="#ffffff"
@@ -101,7 +107,7 @@ class UPIPaymentDialog(tk.Toplevel):
         tk.Label(form_frame, text="Or Pay using UPI ID:", font=("Segoe UI", 8, "bold"), fg="#0f172a", bg="#ffffff").pack(anchor="w")
 
         self.upi_entry = tk.Entry(form_frame, font=("Segoe UI", 9), bg="#f8fafc", relief=tk.SOLID, bd=1)
-        self.upi_entry.insert(0, "user@okhdfcbank")
+        self.upi_entry.insert(0, "")
         self.upi_entry.pack(fill=tk.X, ipady=4, pady=(3, 8))
 
         # Status Label (Shows "Processing...")
@@ -117,14 +123,14 @@ class UPIPaymentDialog(tk.Toplevel):
         # Pay Button
         self.btn_pay = tk.Button(
             self,
-            text=f"Pay ₹ {self.total_amount:,.2f} (Simulate Payment)",
+            text=f"Confirm ₹ {self.total_amount:,.2f} paid",
             font=("Segoe UI", 10, "bold"),
             bg="#16a34a",
             fg="#ffffff",
             activebackground="#15803d",
             relief=tk.FLAT,
             cursor="hand2",
-            command=self.start_fake_payment
+            command=self.confirm_payment
         )
         self.btn_pay.pack(fill=tk.X, padx=25, pady=(4, 6), ipady=5)
 
@@ -165,21 +171,22 @@ class UPIPaymentDialog(tk.Toplevel):
             )
             lbl.pack(padx=8, pady=8)
 
-    def start_fake_payment(self):
-        """Simulates 1.5 seconds of payment verification."""
-        self.btn_pay.config(state=tk.DISABLED, bg="#94a3b8", text="Verifying with Bank...")
-        self.lbl_status.config(text="⏳ Contacting UPI Gateway...", fg="#2563eb")
-        self.update()
-
-        # Wait 1.5 seconds to feel like a real banking app
-        self.after(1500, self.complete_payment)
-
-    def complete_payment(self):
-        self.lbl_status.config(text="✔ Payment Successful! UPI Ref: #UPI" + str(id(self))[-6:], fg="#16a34a")
-        self.update()
-
-        # Short pause to see green success message
-        self.after(600, self.finish_flow)
+    def confirm_payment(self):
+        """Record the user's confirmation without claiming bank verification."""
+        upi_id = self.upi_entry.get().strip()
+        if upi_id and not is_valid_upi_id(upi_id):
+            self.lbl_status.config(text="Enter a valid UPI ID or leave the field blank after scanning.", fg="#dc2626")
+            return
+        if not messagebox.askyesno(
+            "Confirm payment",
+            "This desktop demo cannot verify a payment with a bank.\n\n"
+            "Only continue if the customer has completed payment in their UPI app.",
+            parent=self,
+        ):
+            return
+        self.btn_pay.config(state=tk.DISABLED, bg="#94a3b8", text="Payment confirmed")
+        self.lbl_status.config(text="Payment marked as confirmed by cashier/customer.", fg="#16a34a")
+        self.after(250, self.finish_flow)
 
     def finish_flow(self):
         self.destroy()
