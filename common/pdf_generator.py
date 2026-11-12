@@ -30,6 +30,7 @@ def generate_pdf_receipt(
     customer_name="Guest Customer",
     customer_address="Main Street",
     payment_method="UPI",
+    discount_amount=0.0,
     output_dir="receipts"
 ):
     """
@@ -214,10 +215,11 @@ def generate_pdf_receipt(
 
     subtotal = max(0.0, float(subtotal))
     delivery_fee = max(0.0, float(delivery_fee))
+    discount_amount = max(0.0, float(discount_amount))
     total_amount = max(0.0, float(total_amount))
 
     idx = 1
-    total_taxable = subtotal / 1.05  # 5% GST inclusive calculation
+    total_taxable = subtotal / 1.05  # 5% GST-inclusive calculation
     total_gst_amount = subtotal - total_taxable
     cgst_val = total_gst_amount / 2
     sgst_val = total_gst_amount / 2
@@ -235,7 +237,7 @@ def generate_pdf_receipt(
         i_qty = int(item["qty"])
         item_total = i_price * i_qty
         hsn_code = f"2106{idx % 89 + 10:02d}"
-        tax_part = item_total * 0.05
+        tax_part = item_total * 0.05 / 1.05
         esc_name = html.escape(str(item["name"]))
         table_data.append([
             str(idx),
@@ -274,6 +276,7 @@ def generate_pdf_receipt(
         ["Taxable Subtotal (Excl. Tax):", f"Rs. {total_taxable:,.2f}"],
         ["CGST @ 2.5%:", f"Rs. {cgst_val:,.2f}"],
         ["SGST @ 2.5%:", f"Rs. {sgst_val:,.2f}"],
+        ["Discount:", f"- Rs. {discount_amount:,.2f}"],
         ["Delivery & Handling Fee:", f"Rs. {delivery_fee:,.2f}"],
         ["TOTAL AMOUNT PAID:", f"Rs. {total_amount:,.2f}"]
     ]
@@ -281,15 +284,15 @@ def generate_pdf_receipt(
     summary_table = Table(summary_data, colWidths=[380, 160])
     summary_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 3), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, 3), 8),
-        ('TEXTCOLOR', (0, 0), (-1, 3), colors.HexColor("#475569")),
-        ('FONTNAME', (0, 4), (-1, 4), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 4), (-1, 4), 11),
-        ('TEXTCOLOR', (0, 4), (-1, 4), colors.HexColor("#16a34a")),
+        ('FONTNAME', (0, 0), (-1, 4), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, 4), 8),
+        ('TEXTCOLOR', (0, 0), (-1, 4), colors.HexColor("#475569")),
+        ('FONTNAME', (0, 5), (-1, 5), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 5), (-1, 5), 11),
+        ('TEXTCOLOR', (0, 5), (-1, 5), colors.HexColor("#16a34a")),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LINEABOVE', (0, 4), (-1, 4), 1, colors.HexColor("#16a34a")),
+        ('LINEABOVE', (0, 5), (-1, 5), 1, colors.HexColor("#16a34a")),
     ]))
     story.append(summary_table)
     story.append(Spacer(1, 12))
