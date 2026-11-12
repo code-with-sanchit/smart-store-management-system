@@ -18,11 +18,13 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
 
 from database.db_connection import get_db_connection
 from common.logo_utils import get_logo_image
+from common.theme import apply_desktop_theme
 
 
 class AnalyticsFrame(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        apply_desktop_theme(self.winfo_toplevel())
         self.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
 
         self.canvas = None
