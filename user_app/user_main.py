@@ -13,6 +13,7 @@ from common.logo_utils import get_logo_image, set_window_icon
 from common.pricing import delivery_fee
 from common.sales import SaleError, calculate_sale_totals, record_sale
 from common.ui import Debouncer
+from common.theme import apply_desktop_theme
 from user_app.auth_ui import AuthDialog
 from user_app.upi_payment_dialog import UPIPaymentDialog
 
@@ -42,6 +43,7 @@ class SnapKartCustomerApp(tk.Tk):
         self.geometry("1440x900")
         self.minsize(1220, 750)
         self.configure(bg="#f8fafc")
+        apply_desktop_theme(self)
 
         # Set official window icon
         set_window_icon(self)
