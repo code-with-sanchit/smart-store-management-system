@@ -13,3 +13,9 @@ class Debouncer:
         if self._job is not None:
             self.widget.after_cancel(self._job)
         self._job = self.widget.after(self.delay, callback)
+
+    def cancel(self):
+        """Cancel a pending callback when its owning view is being closed."""
+        if self._job is not None:
+            self.widget.after_cancel(self._job)
+            self._job = None
