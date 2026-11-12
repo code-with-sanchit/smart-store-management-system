@@ -1,5 +1,5 @@
 import unittest
-from common.image_loader import product_image_key, _find_image, get_product_image
+from common.image_loader import product_image_key, _find_image, get_product_image, unavailable_image_message
 
 
 class ImageLoaderTests(unittest.TestCase):
@@ -25,3 +25,6 @@ class ImageLoaderTests(unittest.TestCase):
         photo = get_product_image("invalid_id", "Test Item", "Nonexistent Category")
         # May be PhotoImage or None if Tk not initialized
         self.assertTrue(photo is not None or photo is None)
+
+    def test_missing_image_message_identifies_the_product(self):
+        self.assertIn("Test Item", unavailable_image_message("Test Item"))
