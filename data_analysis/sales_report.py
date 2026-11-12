@@ -59,6 +59,24 @@ def safe_print(*args, **kwargs):
             print(text.encode("ascii", errors="replace").decode("ascii"), **kwargs)
 
 
+def summarize_sales_by_day(sales_df: pd.DataFrame) -> pd.DataFrame:
+    """Return one manager-friendly row per sale date instead of exporting raw orders."""
+    columns = ["sale_date", "orders", "revenue", "average_order_value"]
+    if sales_df.empty:
+        return pd.DataFrame(columns=columns)
+    normalized = sales_df.copy()
+    normalized["sale_datetime"] = pd.to_datetime(normalized["sale_datetime"], errors="coerce")
+    normalized["total_amount"] = pd.to_numeric(normalized["total_amount"], errors="coerce").fillna(0.0)
+    normalized = normalized.dropna(subset=["sale_datetime"])
+    normalized["sale_date"] = normalized["sale_datetime"].dt.date
+    return (
+        normalized.groupby("sale_date", as_index=False)["total_amount"]
+        .agg(orders="count", revenue="sum", average_order_value="mean")
+        .sort_values("sale_date", ascending=False)
+        .round(2)
+    )
+
+
 def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: pd.DataFrame, export_dir: str) -> str:
     """
     Generates a high-quality PDF Executive Business Report with official SnapKart branding.
@@ -304,9 +322,9 @@ def generate_sales_and_inventory_reports(export_dir=None):
                 top_products.to_csv(top_products_path)
                 safe_print(f"    - Saved Top Products to   : {top_products_path}")
 
-            # Export Daily Sales Summary CSV
+            # Export an actual daily summary rather than a raw sales dump.
             sales_summary_path = os.path.join(export_dir, "daily_sales_summary.csv")
-            sales_df.to_csv(sales_summary_path, index=False)
+            summarize_sales_by_day(sales_df).to_csv(sales_summary_path, index=False)
             safe_print(f"    - Saved Sales Report to   : {sales_summary_path}")
         else:
             safe_print("\n[!] Sales Overview: No sales records found yet.")
