@@ -35,3 +35,19 @@ CURATED_CATALOG = [
 def starter_products() -> list[tuple[str, str, float, int]]:
     """Return seed rows in the inventory table column order."""
     return [(name, category, price, stock) for category, name, price, stock in CURATED_CATALOG]
+
+
+def validate_catalog(rows=CURATED_CATALOG) -> list[str]:
+    """Return readable catalog problems so a bad seed cannot silently ship."""
+    issues, names = [], set()
+    for category, name, price, stock in rows:
+        if not category or not name:
+            issues.append("Every product needs a category and name.")
+        if name in names:
+            issues.append(f"Duplicate product name: {name}")
+        names.add(name)
+        if price <= 0:
+            issues.append(f"Product price must be positive: {name}")
+        if stock < 0:
+            issues.append(f"Product stock cannot be negative: {name}")
+    return issues
