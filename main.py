@@ -188,7 +188,10 @@ class SnapKartLauncher(tk.Tk):
                 ):
                     open_pdf_file(pdf_path)
             else:
-                messagebox.showinfo("Reports Generated", "Successfully exported reports to the 'reports/' folder!")
+                messagebox.showwarning(
+                    "Reports unavailable",
+                    "No report was generated. Confirm that MySQL is running and the database settings are correct."
+                )
         except Exception as e:
             messagebox.showerror("Error", f"Failed to generate reports: {e}")
 
