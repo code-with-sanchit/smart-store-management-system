@@ -1,0 +1,7 @@
+{
+  "setting_key": "receipts_path",
+  "setting_value": "receipts/",
+  "description": "Filesystem path for archiving generated PDF cash memos",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
