@@ -1,0 +1,7 @@
+{
+  "setting_key": "pos_terminal_id",
+  "setting_value": "POS-Terminal-01",
+  "description": "Unique hardware identifier for active express counter",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
