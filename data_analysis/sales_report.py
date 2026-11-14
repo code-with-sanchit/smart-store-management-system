@@ -1,5 +1,6 @@
 import os
 import sys
+import html
 import warnings
 from pathlib import Path
 from datetime import datetime
@@ -24,11 +25,12 @@ def _draw_report_footer(canvas, document):
     """Keep page context on printed or multi-page management reports."""
     canvas.saveState()
     canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
-    canvas.line(document.leftMargin, 20, A4[0] - document.rightMargin, 20)
-    canvas.setFont("Helvetica", 7)
+    canvas.setLineWidth(0.75)
+    canvas.line(document.leftMargin, 22, A4[0] - document.rightMargin, 22)
+    canvas.setFont("Helvetica", 7.5)
     canvas.setFillColor(colors.HexColor("#64748b"))
-    canvas.drawString(document.leftMargin, 11, "SnapKart • Confidential internal business report")
-    canvas.drawRightString(A4[0] - document.rightMargin, 11, f"Page {document.page}")
+    canvas.drawString(document.leftMargin, 12, "SnapKart Management Information System • Strictly Confidential Internal Business Document")
+    canvas.drawRightString(A4[0] - document.rightMargin, 12, f"Page {document.page}")
     canvas.restoreState()
 
 from reportlab.lib.pagesizes import A4
@@ -79,7 +81,7 @@ def summarize_sales_by_day(sales_df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: pd.DataFrame, export_dir: str) -> str:
     """
-    Generates a high-quality PDF Executive Business Report with official SnapKart branding.
+    Generates an executive-grade PDF Business Performance & Restock Report with official SnapKart branding.
     """
     pdf_path = os.path.join(export_dir, "SnapKart_Executive_Business_Report.pdf")
     doc = SimpleDocTemplate(
@@ -87,8 +89,8 @@ def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: p
         pagesize=A4,
         rightMargin=30,
         leftMargin=30,
-        topMargin=30,
-        bottomMargin=30
+        topMargin=26,
+        bottomMargin=26
     )
 
     story = []
@@ -98,7 +100,8 @@ def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: p
         "ReportTitle",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=20,
+        fontSize=17,
+        leading=21,
         textColor=colors.HexColor("#0f172a"),
         spaceAfter=2
     )
@@ -107,150 +110,206 @@ def generate_pdf_business_report(sales_kpis: dict, inv_kpis: dict, reorder_df: p
         "ReportSub",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=9,
+        fontSize=8.5,
+        leading=11.5,
         textColor=colors.HexColor("#475569")
+    )
+
+    meta_style = ParagraphStyle(
+        "MetaStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=11.5,
+        textColor=colors.HexColor("#334155"),
+        alignment=2
     )
 
     h2_style = ParagraphStyle(
         "ReportH2",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=12,
+        fontSize=11,
+        leading=14,
         textColor=colors.HexColor("#0f172a"),
-        spaceBefore=10,
-        spaceAfter=6
+        spaceBefore=8,
+        spaceAfter=5
     )
 
-    # 1. Header with Official Logo (with text)
-    logo_path = str(get_logo_path(with_text=True))
+    # 1. Header with Official SnapKart App Badge Logo
+    logo_path = str(get_logo_path(with_text=False, as_badge=True))
     logo_element = None
     if os.path.isfile(logo_path):
         try:
-            logo_element = RLImage(logo_path, width=70, height=70)
+            logo_element = RLImage(logo_path, width=48, height=48)
         except Exception:
             pass
 
-    now_str = datetime.now().strftime("%d %B %Y, %I:%M %p")
-
-    if logo_element is not None:
-        header_table = Table([
-            [
-                logo_element,
-                [
-                    Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", title_style),
-                    Spacer(1, 2),
-                    Paragraph("Executive Business Performance & Inventory Intelligence Report", sub_style)
-                ],
-                Paragraph(
-                    f"<b>Report Date:</b><br/>{now_str}<br/><b>Branch:</b> Flagship Hub",
-                    ParagraphStyle("MetaStyle", parent=styles["Normal"], fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#334155"), alignment=2, leading=11)
-                )
-            ]
-        ], colWidths=[75, 305, 155])
-        header_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-    else:
-        header_table = Table([
-            [
-                Paragraph("<b>SnapKart Retail Pvt. Ltd.</b>", title_style),
-                Paragraph(f"<b>Report Date:</b> {now_str}", sub_style)
-            ]
-        ], colWidths=[360, 175])
-
-    story.append(header_table)
-    story.append(Spacer(1, 4))
-    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#16a34a"), spaceAfter=12))
-
-    # 2. Executive KPI Summary Cards / Table
-    story.append(Paragraph("<b>1. Key Business Metrics Overview</b>", h2_style))
-
-    rev_str = f"Rs. {sales_kpis.get('total_revenue', 0.0):,.2f}"
-    orders_str = f"{sales_kpis.get('total_orders', 0):,}"
-    aov_str = f"Rs. {sales_kpis.get('aov', 0.0):,.2f}"
-    skus_str = f"{inv_kpis.get('total_skus', 0):,}"
-    stock_units_str = f"{inv_kpis.get('total_units', 0):,}"
-    val_str = f"Rs. {inv_kpis.get('total_valuation', 0.0):,.2f}"
-
-    kpi_data = [
-        [
-            Paragraph("<b>Total Revenue Generated</b>", styles["Normal"]),
-            Paragraph(f"<b>{rev_str}</b>", styles["Normal"]),
-            Paragraph("<b>Total Product SKUs</b>", styles["Normal"]),
-            Paragraph(f"<b>{skus_str}</b>", styles["Normal"])
-        ],
-        [
-            Paragraph("<b>Total Orders Completed</b>", styles["Normal"]),
-            Paragraph(f"<b>{orders_str}</b>", styles["Normal"]),
-            Paragraph("<b>Total Units in Stock</b>", styles["Normal"]),
-            Paragraph(f"<b>{stock_units_str}</b>", styles["Normal"])
-        ],
-        [
-            Paragraph("<b>Average Order Value (AOV)</b>", styles["Normal"]),
-            Paragraph(f"<b>{aov_str}</b>", styles["Normal"]),
-            Paragraph("<b>Total Warehouse Valuation</b>", styles["Normal"]),
-            Paragraph(f"<b>{val_str}</b>", styles["Normal"])
-        ]
+    brand_info = [
+        Paragraph("<font color='#15803d'><b>SnapKart</b></font>", title_style),
+        Paragraph("Executive Business Performance & Inventory Intelligence Report<br/><font color='#94a3b8' size='7'>Management Information System (MIS) &bull; Analytics & Forecasting Division</font>", sub_style)
     ]
 
-    kpi_table = Table(kpi_data, colWidths=[160, 105, 160, 110])
-    kpi_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    now_str = datetime.now().strftime("%d %B %Y, %I:%M %p")
+    store_info = Paragraph(
+        f"<b>Report Date:</b> {now_str}<br/>"
+        "<b>Store:</b> SnapKart<br/>"
+        "<b>Prepared For:</b> Executive Management<br/>"
+        "<font color='#dc2626'><b>CONFIDENTIAL &bull; INTERNAL USE ONLY</b></font>",
+        meta_style
+    )
+
+    if logo_element is not None:
+        header_data = [[logo_element, brand_info, store_info]]
+        header_table = Table(header_data, colWidths=[54, 280, 201])
+    else:
+        header_data = [[brand_info, store_info]]
+        header_table = Table(header_data, colWidths=[334, 201])
+
+    header_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
-    story.append(kpi_table)
-    story.append(Spacer(1, 14))
+    story.append(header_table)
+    story.append(Spacer(1, 4))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#15803d"), spaceAfter=10))
+
+    # 2. Executive KPI Summary Cards
+    story.append(Paragraph("<b>1. Key Business Performance Metrics Overview</b>", h2_style))
+
+    rev_val = float(sales_kpis.get('total_revenue', 0.0))
+    orders_val = int(sales_kpis.get('total_orders', 0))
+    aov_val = float(sales_kpis.get('aov', 0.0))
+    skus_val = int(inv_kpis.get('total_skus', 0))
+    stock_units_val = int(inv_kpis.get('total_units', 0))
+    stock_val = float(inv_kpis.get('total_valuation', 0.0))
+
+    def make_kpi_card(title, value, subtitle, accent_color):
+        p_title = Paragraph(f"<font color='{accent_color}'><b>{title.upper()}</b></font>", ParagraphStyle("KT", fontName="Helvetica-Bold", fontSize=7, leading=9))
+        p_val = Paragraph(f"<font color='#0f172a'><b>{value}</b></font>", ParagraphStyle("KV", fontName="Helvetica-Bold", fontSize=13, leading=16))
+        p_sub = Paragraph(f"<font color='#64748b'>{subtitle}</font>", ParagraphStyle("KS", fontName="Helvetica", fontSize=7, leading=9))
+        tbl = Table([[p_title], [p_val], [p_sub]], colWidths=[170])
+        tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ('LINEBEFORE', (0, 0), (0, -1), 3, colors.HexColor(accent_color)),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        return tbl
+
+    c1 = make_kpi_card("Total Revenue", f"Rs. {rev_val:,.2f}", "Gross Sales Realized", "#15803d")
+    c2 = make_kpi_card("Total Orders", f"{orders_val:,} Orders", "Fulfilled Transactions", "#2563eb")
+    c3 = make_kpi_card("Average Order Value", f"Rs. {aov_val:,.2f}", "Basket Size Average", "#7c3aed")
+
+    c4 = make_kpi_card("Product Catalog", f"{skus_val:,} SKUs", "Active Inventory Lines", "#0f172a")
+    c5 = make_kpi_card("Stock on Hand", f"{stock_units_val:,} Units", "Physical Warehouse Count", "#0891b2")
+    c6 = make_kpi_card("Warehouse Valuation", f"Rs. {stock_val:,.2f}", "Total Inventory Asset Value", "#b45309")
+
+    kpi_grid = Table([
+        [c1, c2, c3],
+        [c4, c5, c6]
+    ], colWidths=[178, 178, 178])
+    kpi_grid.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    story.append(kpi_grid)
+    story.append(Spacer(1, 10))
 
     # 3. Critical Low Stock Restock Priority Table
-    story.append(Paragraph("<b>2. Critical Low Stock & Restock Advisory</b>", h2_style))
+    story.append(Paragraph("<b>2. Critical Low Stock & Priority Restock Advisory</b>", h2_style))
+    story.append(Paragraph(
+        "<font color='#64748b' size='7.5'>Products with warehouse stock below safety threshold (&lt; 20 units). Immediate replenishment recommended.</font>",
+        styles["Normal"]
+    ))
+    story.append(Spacer(1, 4))
 
+    th_c = ParagraphStyle("THC", fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=colors.white, alignment=1)
+    th_l = ParagraphStyle("THL", fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=colors.white)
+    tb_c = ParagraphStyle("TBC", fontName="Helvetica", fontSize=7.5, leading=9.5, textColor=colors.HexColor("#334155"), alignment=1)
+    tb_l = ParagraphStyle("TBL", fontName="Helvetica", fontSize=7.5, leading=9.5, textColor=colors.HexColor("#0f172a"))
+
+    crit_count = 0
     if reorder_df is not None and not reorder_df.empty:
+        crit_count = len(reorder_df)
         table_rows = [
             [
-                Paragraph("<b>Item ID</b>", styles["Normal"]),
-                Paragraph("<b>Product Name</b>", styles["Normal"]),
-                Paragraph("<b>Category</b>", styles["Normal"]),
-                Paragraph("<b>Current Stock</b>", styles["Normal"]),
-                Paragraph("<b>Rec. Order</b>", styles["Normal"])
+                Paragraph("<b>SKU ID</b>", th_c),
+                Paragraph("<b>Product Description</b>", th_l),
+                Paragraph("<b>Category</b>", th_l),
+                Paragraph("<b>Stock on Hand</b>", th_c),
+                Paragraph("<b>Rec. Order</b>", th_c),
             ]
         ]
 
-        # Top 18 critical items
-        sample_reorder = reorder_df.head(18)
+        # Top 12 critical items to fit comfortably with clean aesthetics
+        sample_reorder = reorder_df.head(12)
         for _, r in sample_reorder.iterrows():
+            item_id_str = html.escape(str(r.get("item_id", "")))
+            item_name_str = html.escape(str(r.get("name", "")))
+            item_cat_str = html.escape(str(r.get("category", "")))
+            stock_qty = int(r.get("stock_quantity", 0))
+            reorder_units = int(r.get("recommended_reorder_units", 30))
             table_rows.append([
-                Paragraph(str(r.get("item_id", "")), styles["Normal"]),
-                Paragraph(str(r.get("name", ""))[:28], styles["Normal"]),
-                Paragraph(str(r.get("category", ""))[:20], styles["Normal"]),
-                Paragraph(f"<font color='#dc2626'><b>{int(r.get('stock_quantity', 0))}</b></font>", styles["Normal"]),
-                Paragraph(f"<b>+{int(r.get('recommended_reorder_units', 30))}</b>", styles["Normal"])
+                Paragraph(item_id_str, tb_c),
+                Paragraph(item_name_str, tb_l),
+                Paragraph(item_cat_str, tb_l),
+                Paragraph(f"<font color='#dc2626'><b>{stock_qty} units</b></font>", tb_c),
+                Paragraph(f"<font color='#15803d'><b>+{reorder_units} units</b></font>", tb_c),
             ])
 
-        restock_table = Table(table_rows, colWidths=[55, 205, 135, 70, 70])
+        restock_table = Table(table_rows, colWidths=[48, 216, 140, 65, 65])
         restock_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, 0), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
+            ('TOPPADDING', (0, 1), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
         ]))
         story.append(restock_table)
     else:
-        story.append(Paragraph("<i>All product lines currently have sufficient stock levels.</i>", styles["Normal"]))
+        story.append(Paragraph("<i>All product lines currently have sufficient stock levels. Zero critical items.</i>", styles["Normal"]))
 
-    story.append(Spacer(1, 15))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cbd5e1"), spaceAfter=8))
+    story.append(Spacer(1, 10))
+
+    # 4. Strategic Executive Summary Callout Box
+    insights_html = (
+        "<b>Strategic Inventory & Performance Summary:</b><br/>"
+        f"&bull; <b>Replenishment Priority:</b> <b>{crit_count} critical SKUs</b> have fallen below safety threshold (&lt; 20 units). Immediate purchase orders recommended.<br/>"
+        f"&bull; <b>Capital Efficiency:</b> Total warehouse stock valuation is <b>Rs. {stock_val:,.2f}</b> across <b>{stock_units_val:,} physical units</b> in catalog.<br/>"
+        f"&bull; <b>Sales Health:</b> Total generated revenue of <b>Rs. {rev_val:,.2f}</b> across <b>{orders_val} completed transactions</b> with Average Order Value of <b>Rs. {aov_val:,.2f}</b>."
+    )
+    callout_p = Paragraph(insights_html, ParagraphStyle("Callout", fontName="Helvetica", fontSize=7.5, leading=10.5, textColor=colors.HexColor("#334155")))
+    callout_box = Table([[callout_p]], colWidths=[534])
+    callout_box.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ('LINEBEFORE', (0, 0), (0, -1), 3, colors.HexColor("#15803d")),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(callout_box)
+    story.append(Spacer(1, 8))
+
+    # 5. Footer
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cbd5e1"), spaceAfter=4))
     story.append(Paragraph(
-        "<i>Generated by SnapKart Management System. Confidential Internal Business Document.</i>",
-        ParagraphStyle("FooterNotice", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=8, textColor=colors.HexColor("#94a3b8"), alignment=1)
+        "<i>Generated automatically by SnapKart Management System. Strictly Confidential Internal Business Document &bull; Not for Public Circulation.</i>",
+        ParagraphStyle("FooterNotice", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=7, leading=9, textColor=colors.HexColor("#94a3b8"), alignment=1)
     ))
 
     doc.build(story, onFirstPage=_draw_report_footer, onLaterPages=_draw_report_footer)
