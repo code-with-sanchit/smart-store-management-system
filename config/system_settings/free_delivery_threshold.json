@@ -1,0 +1,7 @@
+{
+  "setting_key": "free_delivery_threshold",
+  "setting_value": "500.0",
+  "description": "Cart minimum value required for free delivery promotion",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
