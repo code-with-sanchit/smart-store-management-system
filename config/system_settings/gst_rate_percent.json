@@ -1,0 +1,7 @@
+{
+  "setting_key": "gst_rate_percent",
+  "setting_value": "5.0",
+  "description": "Mandatory GST rate applied to taxable retail subtotal",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
