@@ -1,0 +1,8 @@
+{
+  "role_id": "billing_cashier",
+  "title": "POS Billing Cashier",
+  "description": "Express scanning, invoice generation, and customer checkout",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
