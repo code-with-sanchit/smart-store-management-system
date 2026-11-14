@@ -7,7 +7,7 @@ from datetime import datetime
 
 from database.db_connection import get_db_connection, ensure_core_schema
 from common.store_status import check_store_status
-from common.pdf_generator import generate_pdf_receipt, open_pdf_file
+from common.pdf_generator import generate_pdf_receipt, invoice_number, open_pdf_file
 from common.image_loader import get_product_image
 from common.logo_utils import get_logo_image, set_window_icon
 from common.pricing import delivery_fee
@@ -16,6 +16,7 @@ from common.ui import Debouncer
 from common.theme import apply_desktop_theme
 from user_app.auth_ui import AuthDialog
 from user_app.upi_payment_dialog import UPIPaymentDialog
+from user_app.address_dialog import AddressConfirmationDialog
 
 # Popular City Localities for Delivery
 CITY_LOCALITIES = [
@@ -39,7 +40,7 @@ class SnapKartCustomerApp(tk.Tk):
         # Ensure core schema before running queries
         ensure_core_schema()
 
-        self.title("SnapKart - Your Neighbourhood Superstore")
+        self.title("SnapKart")
         self.geometry("1440x900")
         self.minsize(1220, 750)
         self.configure(bg="#f8fafc")
@@ -63,7 +64,7 @@ class SnapKartCustomerApp(tk.Tk):
         self.active_category = "All Products"
         self.sort_option = tk.StringVar(value="Popularity")
         self.selected_locality = CITY_LOCALITIES[0]
-        self.selected_house_address = "Flat 102, Block B"
+        self.selected_house_address = ""
         self.image_cache = {}
         self.current_page = 1
         self.page_size = 48
@@ -204,10 +205,11 @@ class SnapKartCustomerApp(tk.Tk):
 
         def save_location():
             self.selected_locality = combo_loc.get()
-            self.selected_house_address = entry_house.get().strip() or "Flat 102"
+            self.selected_house_address = entry_house.get().strip()
             short_loc = self.selected_locality.split(",")[0]
-            self.lbl_location.config(text=f"📍 Delivering to: {short_loc} ▾")
-            messagebox.showinfo("Address Updated", f"Delivery address updated to:\n{self.selected_house_address}, {self.selected_locality}")
+            display_addr = f"{self.selected_house_address}, {short_loc}" if self.selected_house_address else short_loc
+            self.lbl_location.config(text=f"📍 Delivering to: {display_addr} ▾")
+            messagebox.showinfo("Address Updated", f"Delivery address set to:\n{display_addr}")
             win.destroy()
 
         tk.Button(
@@ -877,7 +879,8 @@ class SnapKartCustomerApp(tk.Tk):
         summary_box = tk.Frame(self.cart_panel, bg="#f8fafc", bd=1, relief=tk.SOLID)
         summary_box.pack(fill=tk.X, padx=10, pady=(4, 6), ipady=4)
 
-        self.lbl_subtotal = self.make_summary_row(summary_box, "Subtotal", "₹ 0.00")
+        self.lbl_subtotal = self.make_summary_row(summary_box, "Items Subtotal", "₹ 0.00")
+        self.lbl_tax = self.make_summary_row(summary_box, "GST (5% added)", "₹ 0.00")
         self.lbl_delivery = self.make_summary_row(summary_box, "Delivery Fee", "₹ 20.00")
         self.lbl_total = self.make_summary_row(summary_box, "Total Amount", "₹ 0.00", is_total=True)
 
@@ -973,10 +976,12 @@ class SnapKartCustomerApp(tk.Tk):
             tk.Button(ctrl_box, text="🗑️", font=("Segoe UI", 8), fg="#dc2626", bg="#f8fafc", bd=0, cursor="hand2", command=lambda pid=p_id: self.remove_from_cart(pid)).pack(side=tk.RIGHT)
 
         shipping = delivery_fee(subtotal)
-        total_bill = subtotal + shipping
+        tax = round(subtotal * 0.05, 2)
+        total_bill = round(subtotal + tax + shipping, 2)
 
         self.lbl_cart_title.config(text=f"Your Cart ({total_items_count})")
         self.lbl_subtotal.config(text=f"₹ {subtotal:,.2f}")
+        self.lbl_tax.config(text=f"₹ {tax:,.2f}")
         self.lbl_delivery.config(text="Free" if shipping == 0 and self.cart else f"₹ {shipping:.2f}")
         self.lbl_total.config(text=f"₹ {total_bill:,.2f}")
 
@@ -1010,18 +1015,38 @@ class SnapKartCustomerApp(tk.Tk):
 
         raw_subtotal = sum(i["price"] * i["qty"] for i in self.cart.values())
         totals = calculate_sale_totals(self.cart, delivery_fee=delivery_fee(raw_subtotal))
-        subtotal, shipping, total_bill = totals.subtotal, totals.delivery_fee, totals.total
+        subtotal, tax, shipping, total_bill = totals.subtotal, totals.tax, totals.delivery_fee, totals.total
         cust_name = self.current_user["full_name"] if self.current_user else "Guest Customer"
+        cust_phone = self.current_user.get("phone", "") if self.current_user else ""
 
-        # Open Simulated UPI Gateway
-        UPIPaymentDialog(
+        # Every time an order is placed, ask for address confirmation and modification
+        def on_address_confirmed(confirmed_addr):
+            self.selected_house_address = confirmed_addr["house"]
+            self.selected_locality = confirmed_addr["locality"]
+            full_addr = confirmed_addr["full_address"]
+            short_loc = self.selected_locality.split(",")[0]
+            display_addr = f"{self.selected_house_address}, {short_loc}" if self.selected_house_address else short_loc
+            self.lbl_location.config(text=f"📍 Delivering to: {display_addr} ▾")
+
+            # Open Simulated UPI Gateway with total including taxes
+            UPIPaymentDialog(
+                parent=self,
+                total_amount=total_bill,
+                customer_name=cust_name,
+                on_payment_success=lambda: self.complete_order_and_download(
+                    subtotal, shipping, total_bill, cust_name, full_addr
+                )
+            )
+
+        AddressConfirmationDialog(
             parent=self,
-            total_amount=total_bill,
-            customer_name=cust_name,
-            on_payment_success=lambda: self.complete_order_and_download(subtotal, shipping, total_bill, cust_name)
+            initial_house=self.selected_house_address,
+            initial_locality=self.selected_locality,
+            initial_phone=cust_phone,
+            on_confirmed=on_address_confirmed
         )
 
-    def complete_order_and_download(self, subtotal, shipping, total_bill, cust_name):
+    def complete_order_and_download(self, subtotal, shipping, total_bill, cust_name, customer_address=None):
         conn = get_db_connection()
         if not conn:
             messagebox.showerror("Error", "Could not connect to MySQL database.")
@@ -1033,7 +1058,7 @@ class SnapKartCustomerApp(tk.Tk):
             totals = calculate_sale_totals(self.cart, delivery_fee=shipping)
             sale_id = record_sale(conn, self.cart, totals, "UPI", customer_id=cust_id, order_channel="delivery")
 
-            full_addr = f"{self.selected_house_address}, {self.selected_locality}"
+            full_addr = customer_address or f"{self.selected_house_address}, {self.selected_locality}"
 
             # Generate Official GST Tax Invoice PDF
             default_pdf = generate_pdf_receipt(
@@ -1050,7 +1075,7 @@ class SnapKartCustomerApp(tk.Tk):
             ask_download = messagebox.askyesno(
                 "Payment Successful! 🎉",
                 f"UPI Payment of ₹ {total_bill:,.2f} was successful!\n\n"
-                f"GST Tax Invoice ID: #SK-2026-{sale_id:06d}\n"
+                f"Tax Invoice ID: #{invoice_number(sale_id)}\n"
                 f"Delivering to: {full_addr}\n\n"
                 "Would you like to download your official Tax Invoice bill now?"
             )
@@ -1108,7 +1133,7 @@ class SnapKartCustomerApp(tk.Tk):
         footer.pack(fill=tk.X, side=tk.BOTTOM)
         footer.pack_propagate(False)
 
-        perks = "✨ Quality Products • 🚚 30-Min Fast Delivery • 💳 Instant UPI • 📍 SnapKart Superstore"
+        perks = "✨ Quality Products • 🚚 30-Min Fast Delivery • 💳 Instant UPI • 📍 SnapKart"
         tk.Label(footer, text=perks, font=("Segoe UI", 8), fg=self.COLOR_MUTED, bg=self.COLOR_WHITE).pack(side=tk.LEFT, padx=18)
         tk.Label(footer, text="Thank you for shopping with SnapKart! ❤️", font=("Segoe UI", 8, "italic"), fg=self.COLOR_MUTED, bg=self.COLOR_WHITE).pack(side=tk.RIGHT, padx=18)
 

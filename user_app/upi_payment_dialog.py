@@ -49,7 +49,7 @@ class UPIPaymentDialog(tk.Toplevel):
         top_title_row = tk.Frame(header, bg="#16a34a")
         top_title_row.pack(pady=(10, 2))
 
-        self.upi_logo = get_logo_image(with_text=False, size=(30, 30))
+        self.upi_logo = get_logo_image(with_text=False, size=(30, 30), as_badge=False)
         if self.upi_logo:
             tk.Label(top_title_row, image=self.upi_logo, bg="#16a34a").pack(side=tk.LEFT, padx=(0, 6))
 

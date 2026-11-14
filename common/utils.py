@@ -11,9 +11,10 @@ def format_receipt(sale_id, items_dict, subtotal, delivery_fee, total_amount, pa
     line = "=" * 48
     dash = "-" * 48
 
+    tax = round(subtotal * 0.05, 2)
     receipt_lines = [
         line,
-        "                 SNAPKART RETAIL                ",
+        "                    SNAPKART                    ",
         "        Your Neighbourhood Store, Online        ",
         "         Sanjay Place, Agra - 282002            ",
         "            Uttar Pradesh, India                ",
@@ -39,6 +40,7 @@ def format_receipt(sale_id, items_dict, subtotal, delivery_fee, total_amount, pa
     receipt_lines.extend([
         dash,
         f"{'Subtotal:':<36}₹ {subtotal:>8.2f}",
+        f"{'GST (5% added):':<36}₹ {tax:>8.2f}",
         f"{'Delivery Charge:':<36}₹ {delivery_fee:>8.2f}",
         line,
         f"{'TOTAL AMOUNT PAID:':<36}₹ {total_amount:>8.2f}",

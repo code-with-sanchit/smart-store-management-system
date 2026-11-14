@@ -42,3 +42,5 @@ receipts/*.txt
 # Gemini / Agent metadata
 .agents/
 .gemini/
+scratch/
+

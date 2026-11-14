@@ -17,7 +17,7 @@ class SnapKartLauncher(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("SnapKart - Retail Application Launcher")
+        self.title("SnapKart")
         self.geometry("680x540")
         self.resizable(False, False)
         self.configure(bg="#0f172a")
