@@ -1,0 +1,8 @@
+{
+  "role_id": "it_pos_admin",
+  "title": "POS Systems & Hardware Admin",
+  "description": "Barcode scanner calibration, database backups, and terminal maintenance",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
