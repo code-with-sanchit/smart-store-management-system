@@ -126,6 +126,42 @@ def ensure_core_schema():
         );
         """)
 
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS staff (
+            staff_id VARCHAR(20) PRIMARY KEY,
+            full_name VARCHAR(100) NOT NULL,
+            role VARCHAR(100) NOT NULL,
+            phone VARCHAR(30) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            shift VARCHAR(100) NOT NULL,
+            status VARCHAR(20) DEFAULT 'Active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS suppliers (
+            supplier_id VARCHAR(20) PRIMARY KEY,
+            name VARCHAR(150) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            contact_person VARCHAR(100) NOT NULL,
+            phone VARCHAR(30) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            address VARCHAR(255) NOT NULL,
+            status VARCHAR(20) DEFAULT 'Active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            setting_key VARCHAR(50) PRIMARY KEY,
+            setting_value TEXT NOT NULL,
+            description VARCHAR(255),
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        );
+        """)
+
         # Upgrade password_hash column if existing table had VARCHAR(64)
         cursor.execute("""
             SELECT CHARACTER_MAXIMUM_LENGTH
