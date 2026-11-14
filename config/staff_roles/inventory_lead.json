@@ -1,0 +1,8 @@
+{
+  "role_id": "inventory_lead",
+  "title": "Inventory & Warehouse Lead",
+  "description": "Stock count adjustments, batch verification, and replenishment",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
