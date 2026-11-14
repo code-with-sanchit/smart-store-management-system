@@ -1,0 +1,7 @@
+{
+  "setting_key": "store_name",
+  "setting_value": "SnapKart",
+  "description": "Primary store brand name used on receipts and bills",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
