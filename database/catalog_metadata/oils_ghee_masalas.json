@@ -1,0 +1,11 @@
+{
+  "category_slug": "oils_ghee_masalas",
+  "category_name": "Cooking Oils, Ghee & Masalas",
+  "description": "Edible oils, pure desi ghee, and whole spices data",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
