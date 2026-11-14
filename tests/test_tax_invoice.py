@@ -42,3 +42,4 @@ class TaxInvoiceTests(unittest.TestCase):
             )
             self.assertTrue(os.path.isfile(pdf_path))
             self.assertGreater(os.path.getsize(pdf_path), 5000)
+

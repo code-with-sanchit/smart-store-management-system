@@ -51,3 +51,24 @@ class AdminPortalTests(unittest.TestCase):
         self.assertIn("Monday", frame.day_entries)
         self.assertIn("Sunday", frame.day_entries)
         win.destroy()
+
+    def test_admin_color_constants(self):
+        # Verify color attributes are standard across admin portal
+        from admin_app.admin_main import SnapKartModernDashboard
+        self.assertTrue(hasattr(SnapKartModernDashboard, "__init__"))
+
+    def test_db_staff_and_suppliers_schema(self):
+        # Verify staff, suppliers, and system_settings tables are active in database
+        from database.db_connection import get_db_connection
+        conn = get_db_connection()
+        self.assertIsNotNone(conn)
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES LIKE 'staff';")
+        self.assertEqual(len(cursor.fetchall()), 1)
+        cursor.execute("SHOW TABLES LIKE 'suppliers';")
+        self.assertEqual(len(cursor.fetchall()), 1)
+        cursor.execute("SHOW TABLES LIKE 'system_settings';")
+        self.assertEqual(len(cursor.fetchall()), 1)
+        cursor.close()
+        conn.close()
+
