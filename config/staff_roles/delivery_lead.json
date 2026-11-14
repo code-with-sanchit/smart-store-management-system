@@ -1,0 +1,8 @@
+{
+  "role_id": "delivery_lead",
+  "title": "Delivery & Logistics Coordinator",
+  "description": "Routing, parcel handovers, and doorstep delivery dispatch",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
