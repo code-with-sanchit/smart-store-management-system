@@ -1,0 +1,11 @@
+{
+  "category_slug": "baby_care",
+  "category_name": "Baby Care & Diapers",
+  "description": "Infant nutrition, diapers, and baby skin safety standards",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
