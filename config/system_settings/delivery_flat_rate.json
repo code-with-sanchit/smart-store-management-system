@@ -1,0 +1,7 @@
+{
+  "setting_key": "delivery_flat_rate",
+  "setting_value": "20.0",
+  "description": "Standard delivery charge for orders under threshold",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
