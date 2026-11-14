@@ -43,7 +43,9 @@ class SnapKartModernDashboard(tk.Tk):
         self.COLOR_WARNING = "#f59e0b"
         self.COLOR_PURPLE = "#9333ea"
         self.COLOR_TEXT_DARK = "#0f172a"
+        self.COLOR_DARK = "#0f172a"
         self.COLOR_TEXT_MUTED = "#64748b"
+        self.COLOR_MUTED = "#64748b"
 
         self.chart_canvas = None
         self._active_canvas = None
@@ -293,20 +295,6 @@ class SnapKartModernDashboard(tk.Tk):
         tk.Label(head, text="🚚 Verified Wholesale Suppliers & Vendor Directory", font=("Segoe UI", 12, "bold"), fg="#38bdf8", bg="#0f172a").pack(side=tk.LEFT, padx=15)
         tk.Label(head, text="Supermarket Supply Chain Management", font=("Segoe UI", 8), fg="#94a3b8", bg="#0f172a").pack(side=tk.RIGHT, padx=15)
 
-        # Suppliers in-memory store
-        suppliers_data = [
-            ["SUP-01", "Central Grain Wholesale Mandi", "Grocery & Staples", "Ramesh Agarwal", "+91 98370 11223", "orders@grainmandi.in", "Belanganj Commercial Mandi", "Active"],
-            ["SUP-02", "Regional Dairy Co-op Federation", "Dairy, Milk & Paneer", "Dr. V. K. Saxena", "+91 98370 22334", "supply@dairyfed.org", "Industrial Area Sector 4", "Active"],
-            ["SUP-03", "Cold Storage Farm Logistics", "Fresh Fruits & Berries", "Sunil Yadav", "+91 98370 33445", "produce@coldfarms.com", "Sikandra Highway Hub", "Active"],
-            ["SUP-04", "Green Valley Organic Farms", "Fresh Vegetables & Greens", "Manish Rawat", "+91 98370 44556", "fresh@greenvalley.org", "Rural Agricultural Belt", "Active"],
-            ["SUP-05", "National FMCG & Snacks Distributors", "Snacks, Chips & Namkeen", "Deepak Mittal", "+91 98370 55667", "deepak@fmcgdist.in", "Transport Nagar Depot", "Active"],
-            ["SUP-06", "Imperial Confectionery Wholesale", "Chocolates & Biscuits", "Kavita Bansal", "+91 98370 66778", "sales@imperialconf.in", "Central Market Yard", "Active"],
-            ["SUP-07", "Assam & Nilgiri Tea Estates", "Tea, Coffee & Beverages", "Arun Bhattacharya", "+91 98370 77889", "teaorders@assamtea.co", "Civil Lines Logistics", "Active"],
-            ["SUP-08", "CleanCare FMCG Distributors", "Household & Cleaning", "Suresh Gupta", "+91 98370 88990", "info@cleancare.in", "Godown Complex Sector 2", "Active"],
-            ["SUP-09", "Personal Care & Cosmetics Hub", "Personal Care & Makeup", "Rohit Malhotra", "+91 98370 99001", "wholesale@cosmeticshub.in", "Commercial Plaza 3", "Active"],
-            ["SUP-10", "MedLife Pharma Wholesale", "All Medicines & First Aid", "Dr. Alok Verma", "+91 98370 00112", "orders@medlifepharma.in", "Medical Complex Sector 1", "Active"],
-        ]
-
         # Filter & Action Bar
         ctrl_bar = tk.Frame(win, bg="#f8fafc")
         ctrl_bar.pack(fill=tk.X, padx=15, pady=8)
@@ -348,10 +336,29 @@ class SnapKartModernDashboard(tk.Tk):
         def refresh_table():
             for r in tree.get_children():
                 tree.delete(r)
-            q = search_var.get().strip().lower()
-            for s in suppliers_data:
-                if not q or any(q in str(x).lower() for x in s):
-                    tree.insert("", tk.END, values=s)
+            conn = get_db_connection()
+            if not conn:
+                return
+            try:
+                c = conn.cursor(dictionary=True)
+                q = search_var.get().strip().lower()
+                if q:
+                    c.execute(
+                        "SELECT supplier_id, name, category, contact_person, phone, email, address, status FROM suppliers WHERE LOWER(name) LIKE %s OR LOWER(category) LIKE %s OR LOWER(contact_person) LIKE %s ORDER BY supplier_id;",
+                        (f"%{q}%", f"%{q}%", f"%{q}%")
+                    )
+                else:
+                    c.execute("SELECT supplier_id, name, category, contact_person, phone, email, address, status FROM suppliers ORDER BY supplier_id;")
+                rows = c.fetchall()
+                for r in rows:
+                    tree.insert("", tk.END, values=(
+                        r["supplier_id"], r["name"], r["category"], r["contact_person"],
+                        r["phone"], r["email"], r["address"], r["status"]
+                    ))
+                c.close()
+                conn.close()
+            except Exception as e:
+                print(f"Error fetching suppliers from MySQL: {e}")
 
         search_ent.bind("<KeyRelease>", lambda e: refresh_table())
         refresh_table()
@@ -396,11 +403,25 @@ class SnapKartModernDashboard(tk.Tk):
                 if not name:
                     messagebox.showwarning("Validation", "Supplier Name is required!")
                     return
-                new_id = f"SUP-{len(suppliers_data)+1:02d}"
-                suppliers_data.append([new_id, name, cat, cont, phone, email, addr, "Active"])
-                refresh_table()
-                messagebox.showinfo("Success", f"Supplier '{name}' onboarded successfully!")
-                d.destroy()
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        c = conn.cursor()
+                        c.execute("SELECT COUNT(*) FROM suppliers;")
+                        cnt = c.fetchone()[0] + 1
+                        new_id = f"SUP-{cnt:02d}"
+                        c.execute(
+                            "INSERT INTO suppliers (supplier_id, name, category, contact_person, phone, email, address, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);",
+                            (new_id, name, cat, cont, phone, email, addr, "Active")
+                        )
+                        conn.commit()
+                        c.close()
+                        conn.close()
+                        refresh_table()
+                        messagebox.showinfo("Success", f"Supplier '{name}' registered successfully in MySQL database!")
+                        d.destroy()
+                    except Exception as e:
+                        messagebox.showerror("Database Error", f"Failed to save supplier: {e}")
 
             tk.Button(d, text="Save & Register Supplier", font=("Segoe UI", 10, "bold"), bg="#16a34a", fg="#ffffff", relief=tk.FLAT, cursor="hand2", command=save_sup).pack(fill=tk.X, padx=25, pady=(5, 15), ipady=4)
 
@@ -410,13 +431,21 @@ class SnapKartModernDashboard(tk.Tk):
                 messagebox.showwarning("Select Supplier", "Please select a supplier from the list to remove.")
                 return
             val = tree.item(sel[0], "values")
-            if messagebox.askyesno("Confirm Delete", f"Remove supplier '{val[1]}' from directory?"):
-                for idx, s in enumerate(suppliers_data):
-                    if s[0] == val[0]:
-                        suppliers_data.pop(idx)
-                        break
-                refresh_table()
-                messagebox.showinfo("Removed", "Supplier removed successfully.")
+            sup_id = val[0]
+            sup_name = val[1]
+            if messagebox.askyesno("Confirm Delete", f"Remove supplier '{sup_name}' ({sup_id}) from database?"):
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        c = conn.cursor()
+                        c.execute("DELETE FROM suppliers WHERE supplier_id = %s;", (sup_id,))
+                        conn.commit()
+                        c.close()
+                        conn.close()
+                        refresh_table()
+                        messagebox.showinfo("Removed", "Supplier removed successfully from MySQL.")
+                    except Exception as e:
+                        messagebox.showerror("Error", f"Failed to delete supplier: {e}")
 
         # Bottom Buttons
         btn_bar = tk.Frame(win, bg="#f8fafc")
@@ -441,15 +470,6 @@ class SnapKartModernDashboard(tk.Tk):
         # ================= TAB 1: STAFF & EMPLOYEES =================
         tab_staff = tk.Frame(nb, bg="#ffffff")
         nb.add(tab_staff, text="  👔 Store Staff & Roles  ")
-
-        staff_list = [
-            ["EMP-101", "Rajesh Sharma", "Store General Manager", "+91 98765 43210", "rajesh.mgr@snapkart.in", "Full Day (09:00 AM - 07:00 PM)", "Active"],
-            ["EMP-102", "Priya Verma", "Head Cashier & POS Supervisor", "+91 98765 43211", "priya.pos@snapkart.in", "Morning Shift (08:30 AM - 03:30 PM)", "Active"],
-            ["EMP-103", "Amit Kumar", "Inventory & Warehouse Lead", "+91 98765 43212", "amit.inv@snapkart.in", "Full Day (09:00 AM - 06:00 PM)", "Active"],
-            ["EMP-104", "Sneha Gupta", "Billing Cashier Terminal 02", "+91 98765 43213", "sneha.cash@snapkart.in", "Evening Shift (02:30 PM - 10:00 PM)", "Active"],
-            ["EMP-105", "Vikram Singh", "Store Logistics & Delivery Lead", "+91 98765 43214", "vikram.log@snapkart.in", "Morning Shift (08:30 AM - 04:30 PM)", "Active"],
-            ["EMP-106", "Pooja Patel", "Customer Support Executive", "+91 98765 43215", "pooja.crm@snapkart.in", "Evening Shift (01:00 PM - 09:30 PM)", "Active"],
-        ]
 
         st_top = tk.Frame(tab_staff, bg="#ffffff")
         st_top.pack(fill=tk.X, padx=15, pady=8)
@@ -482,8 +502,21 @@ class SnapKartModernDashboard(tk.Tk):
         def refresh_staff():
             for r in st_tree.get_children():
                 st_tree.delete(r)
-            for s in staff_list:
-                st_tree.insert("", tk.END, values=s)
+            conn = get_db_connection()
+            if conn:
+                try:
+                    c = conn.cursor(dictionary=True)
+                    c.execute("SELECT staff_id, full_name, role, phone, email, shift, status FROM staff ORDER BY staff_id;")
+                    rows = c.fetchall()
+                    for s in rows:
+                        st_tree.insert("", tk.END, values=(
+                            s["staff_id"], s["full_name"], s["role"],
+                            s["phone"], s["email"], s["shift"], s["status"]
+                        ))
+                    c.close()
+                    conn.close()
+                except Exception as e:
+                    print(f"Error reading staff from MySQL: {e}")
 
         refresh_staff()
 
@@ -528,11 +561,29 @@ class SnapKartModernDashboard(tk.Tk):
                 if not nm:
                     messagebox.showwarning("Validation", "Name is required!")
                     return
-                nid = f"EMP-{100+len(staff_list)+1}"
-                staff_list.append([nid, nm, cb_role.get(), e_phone.get().strip(), f"{nm.lower().replace(' ', '.')}@snapkart.in", cb_shift.get(), "Active"])
-                refresh_staff()
-                messagebox.showinfo("Success", f"Staff member '{nm}' registered successfully!")
-                d.destroy()
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        c = conn.cursor()
+                        c.execute("SELECT COUNT(*) FROM staff;")
+                        cnt = c.fetchone()[0] + 1
+                        nid = f"EMP-{100 + cnt}"
+                        role = cb_role.get()
+                        phone = e_phone.get().strip()
+                        email = f"{nm.lower().replace(' ', '.')}@snapkart.in"
+                        shift = cb_shift.get()
+                        c.execute(
+                            "INSERT INTO staff (staff_id, full_name, role, phone, email, shift, status) VALUES (%s, %s, %s, %s, %s, %s, %s);",
+                            (nid, nm, role, phone, email, shift, "Active")
+                        )
+                        conn.commit()
+                        c.close()
+                        conn.close()
+                        refresh_staff()
+                        messagebox.showinfo("Success", f"Staff member '{nm}' registered in MySQL database!")
+                        d.destroy()
+                    except Exception as err:
+                        messagebox.showerror("Error", f"Failed to register staff: {err}")
 
             tk.Button(d, text="Confirm & Register Staff", font=("Segoe UI", 9, "bold"), bg="#16a34a", fg="#ffffff", relief=tk.FLAT, cursor="hand2", command=save_st).pack(fill=tk.X, padx=25, pady=(0, 15), ipady=4)
 
@@ -542,13 +593,21 @@ class SnapKartModernDashboard(tk.Tk):
                 messagebox.showwarning("Select Staff", "Please select a staff member to remove.")
                 return
             val = st_tree.item(sel[0], "values")
-            if messagebox.askyesno("Confirm Deletion", f"Remove employee '{val[1]}' ({val[0]}) from staff roster?"):
-                for idx, s in enumerate(staff_list):
-                    if s[0] == val[0]:
-                        staff_list.pop(idx)
-                        break
-                refresh_staff()
-                messagebox.showinfo("Removed", "Staff member removed.")
+            emp_id = val[0]
+            emp_name = val[1]
+            if messagebox.askyesno("Confirm Deletion", f"Remove employee '{emp_name}' ({emp_id}) from staff roster in MySQL?"):
+                conn = get_db_connection()
+                if conn:
+                    try:
+                        c = conn.cursor()
+                        c.execute("DELETE FROM staff WHERE staff_id = %s;", (emp_id,))
+                        conn.commit()
+                        c.close()
+                        conn.close()
+                        refresh_staff()
+                        messagebox.showinfo("Removed", "Staff member removed from MySQL database.")
+                    except Exception as err:
+                        messagebox.showerror("Error", f"Failed to delete staff: {err}")
 
         tk.Button(st_btns, text="➕ Add Staff Member", font=("Segoe UI", 9, "bold"), bg="#2563eb", fg="#ffffff", relief=tk.FLAT, padx=12, pady=4, cursor="hand2", command=add_staff_dlg).pack(side=tk.LEFT, padx=4)
         tk.Button(st_btns, text="🗑️ Remove Selected Staff", font=("Segoe UI", 9), fg="#dc2626", padx=10, pady=4, cursor="hand2", command=remove_staff_member).pack(side=tk.LEFT, padx=4)
@@ -693,15 +752,29 @@ class SnapKartModernDashboard(tk.Tk):
         box = tk.Frame(win, bg="#f8fafc", bd=1, relief=tk.SOLID)
         box.pack(fill=tk.BOTH, expand=True, padx=20, pady=8, ipady=8)
 
+        # Load settings live from MySQL system_settings table
+        db_settings = {}
+        conn = get_db_connection()
+        if conn:
+            try:
+                c = conn.cursor(dictionary=True)
+                c.execute("SELECT setting_key, setting_value FROM system_settings;")
+                for r in c.fetchall():
+                    db_settings[r["setting_key"]] = r["setting_value"]
+                c.close()
+                conn.close()
+            except Exception as e:
+                print(f"Error loading system settings from MySQL: {e}")
+
         # Settings Fields
         entries = {}
         settings_spec = [
-            ("Store Brand Name:", "store_name", "SnapKart"),
-            ("Default Currency:", "currency", "INR (₹)"),
-            ("GST Rate (%):", "gst_rate", "5% Added (CGST 2.5% + SGST 2.5%)"),
-            ("Low Stock Threshold:", "low_stock", "25 Units"),
-            ("Receipt Storage Directory:", "receipt_dir", "receipts/"),
-            ("POS Machine Terminal ID:", "pos_term", "Terminal-01 (Active)"),
+            ("Store Brand Name:", "store_name", db_settings.get("store_name", "SnapKart")),
+            ("Default Currency:", "currency", db_settings.get("currency", "INR (₹)")),
+            ("GST Rate (%):", "gst_rate", db_settings.get("gst_rate", "5% Added (CGST 2.5% + SGST 2.5%)")),
+            ("Low Stock Threshold:", "low_stock", db_settings.get("low_stock", "25 Units")),
+            ("Receipt Storage Directory:", "receipt_dir", db_settings.get("receipt_dir", "receipts/")),
+            ("POS Machine Terminal ID:", "pos_term", db_settings.get("pos_term", "Terminal-01 (Active)")),
         ]
 
         for lbl, key, d_val in settings_spec:
@@ -761,8 +834,26 @@ class SnapKartModernDashboard(tk.Tk):
         tk.Button(act_inner, text="🧹 Clear Image Cache", font=("Segoe UI", 8), bg="#e2e8f0", padx=10, pady=4, cursor="hand2", command=clear_cache).pack(side=tk.LEFT, padx=4)
 
         def save_sys():
-            messagebox.showinfo("Settings Saved", "System configuration and store parameters updated successfully.")
-            win.destroy()
+            conn = get_db_connection()
+            if not conn:
+                messagebox.showerror("Database Error", "Could not connect to MySQL database server.")
+                return
+            try:
+                c = conn.cursor()
+                for key, ent in entries.items():
+                    val = ent.get().strip()
+                    c.execute(
+                        "INSERT INTO system_settings (setting_key, setting_value) VALUES (%s, %s) "
+                        "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);",
+                        (key, val)
+                    )
+                conn.commit()
+                c.close()
+                conn.close()
+                messagebox.showinfo("Settings Saved", "System configuration and store parameters updated in MySQL database.")
+                win.destroy()
+            except Exception as e:
+                messagebox.showerror("Database Error", f"Failed to save settings to MySQL: {e}")
 
         tk.Button(win, text="💾 Save Configuration", font=("Segoe UI", 10, "bold"), bg=self.COLOR_PRIMARY, fg="#ffffff", relief=tk.FLAT, cursor="hand2", command=save_sys).pack(fill=tk.X, padx=20, pady=(4, 15), ipady=5)
 
