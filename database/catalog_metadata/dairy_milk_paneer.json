@@ -1,0 +1,11 @@
+{
+  "category_slug": "dairy_milk_paneer",
+  "category_name": "Dairy, Milk & Paneer",
+  "description": "Fresh milk, paneer, butter, and cheese specifications",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": true,
+  "active": true
+}
