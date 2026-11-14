@@ -1,0 +1,7 @@
+{
+  "setting_key": "return_window_days",
+  "setting_value": "7",
+  "description": "Maximum days allowed from invoice date for processing refunds",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
