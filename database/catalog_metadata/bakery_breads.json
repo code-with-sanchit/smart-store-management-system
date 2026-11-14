@@ -1,0 +1,11 @@
+{
+  "category_slug": "bakery_breads",
+  "category_name": "Bakery, Breads & Cakes",
+  "description": "Fresh bakery, artisan bread, and shelf-life tracking",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": true,
+  "active": true
+}
