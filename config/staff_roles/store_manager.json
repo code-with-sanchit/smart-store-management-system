@@ -1,0 +1,8 @@
+{
+  "role_id": "store_manager",
+  "title": "Store General Manager",
+  "description": "Overall operations, approvals, and reporting authority",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
