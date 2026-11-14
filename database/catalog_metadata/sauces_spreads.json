@@ -1,0 +1,11 @@
+{
+  "category_slug": "sauces_spreads",
+  "category_name": "Sauces, Spreads & Honey",
+  "description": "Condiments, organic honey, and fruit jam specifications",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
