@@ -1,0 +1,11 @@
+{
+  "category_slug": "sports_fitness",
+  "category_name": "Sports & Fitness",
+  "description": "Protein supplements, fitness gear, and orthopedic supports",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
