@@ -1,0 +1,11 @@
+{
+  "category_slug": "hair_care",
+  "category_name": "Hair Care & Shampoos",
+  "description": "Hair oils, conditioners, and shampoo formulas",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
