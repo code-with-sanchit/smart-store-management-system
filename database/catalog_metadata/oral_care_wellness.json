@@ -1,0 +1,11 @@
+{
+  "category_slug": "oral_care_wellness",
+  "category_name": "Oral Care & Wellness",
+  "description": "Toothpastes, dental hygiene, and herbal supplements",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
