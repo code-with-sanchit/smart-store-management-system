@@ -1,0 +1,8 @@
+{
+  "role_id": "procurement_buyer",
+  "title": "Wholesale Procurement Buyer",
+  "description": "Purchase orders, vendor PO negotiations, and intake receipts",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
