@@ -1,0 +1,7 @@
+{
+  "setting_key": "low_stock_limit",
+  "setting_value": "25",
+  "description": "Minimum stock unit threshold triggering reorder advisory",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
