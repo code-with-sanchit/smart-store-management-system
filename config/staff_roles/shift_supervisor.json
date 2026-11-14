@@ -1,0 +1,8 @@
+{
+  "role_id": "shift_supervisor",
+  "title": "Floor Shift Supervisor",
+  "description": "Daily floor presence, customer queue easing, and shelf replenishment",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
