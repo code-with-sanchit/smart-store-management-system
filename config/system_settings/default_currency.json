@@ -1,0 +1,7 @@
+{
+  "setting_key": "default_currency",
+  "setting_value": "INR (₹)",
+  "description": "Store primary trading currency symbol and code",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
