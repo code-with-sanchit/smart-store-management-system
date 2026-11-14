@@ -1,0 +1,8 @@
+{
+  "role_id": "quality_inspector",
+  "title": "Perishable Quality Inspector",
+  "description": "Expiry date validation, dairy temperature compliance, and freshness checks",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
