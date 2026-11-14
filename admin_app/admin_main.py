@@ -25,7 +25,7 @@ class SnapKartModernDashboard(tk.Tk):
         # Ensure core schema
         ensure_core_schema()
 
-        self.title("SnapKart - Admin Control Portal")
+        self.title("SnapKart")
         self.geometry("1440x900")
         self.minsize(1250, 780)
         self.configure(bg="#0f172a")
@@ -121,13 +121,12 @@ class SnapKartModernDashboard(tk.Tk):
         # Bottom version footer
         footer = tk.Frame(sidebar, bg=self.COLOR_SIDEBAR)
         footer.pack(side=tk.BOTTOM, fill=tk.X, padx=18, pady=14)
-        tk.Label(footer, text="SnapKart POS v2.4.0", font=("Segoe UI", 8, "bold"), fg="#94a3b8", bg=self.COLOR_SIDEBAR).pack(anchor="w")
-        tk.Label(footer, text="Built for Retail Business", font=("Segoe UI", 7), fg="#64748b", bg=self.COLOR_SIDEBAR).pack(anchor="w")
+        tk.Label(footer, text="SnapKart v2.4.0", font=("Segoe UI", 8, "bold"), fg="#94a3b8", bg=self.COLOR_SIDEBAR).pack(anchor="w")
+        tk.Label(footer, text="Retail Management", font=("Segoe UI", 7), fg="#64748b", bg=self.COLOR_SIDEBAR).pack(anchor="w")
 
     def navigate_menu(self, menu_name):
         if "Dashboard" in menu_name:
             self.load_all_backend_data()
-            messagebox.showinfo("Dashboard Refreshed", "Dashboard data synced with MySQL database.")
 
         elif "Billing" in menu_name:
             from admin_app.billing_pos_ui import BillingPOSFrame
@@ -238,8 +237,43 @@ class SnapKartModernDashboard(tk.Tk):
             if not s_txt.isdigit():
                 messagebox.showerror("Error", "Please enter a valid numeric Sale ID.")
                 return
-            messagebox.showinfo("Return Processed", f"Return request logged for Invoice #{s_txt}.\nStock item returned to inventory.")
-            win.destroy()
+            sale_id = int(s_txt)
+            conn = get_db_connection()
+            if not conn:
+                messagebox.showerror("Database Error", "Could not connect to MySQL database.")
+                return
+            cursor = None
+            try:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT total_amount FROM sales WHERE sale_id = %s", (sale_id,))
+                sale_row = cursor.fetchone()
+                if not sale_row:
+                    messagebox.showwarning("Sale Not Found", f"No sale record found for Invoice #{sale_id}.")
+                    return
+
+                cursor.execute("SELECT item_id, quantity FROM sale_items WHERE sale_id = %s", (sale_id,))
+                items = cursor.fetchall()
+                for itm in items:
+                    cursor.execute(
+                        "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE item_id = %s",
+                        (itm["quantity"], itm["item_id"])
+                    )
+                conn.commit()
+                messagebox.showinfo(
+                    "Return Processed",
+                    f"✅ Return and refund successfully processed for Invoice #{sale_id}!\n\n"
+                    f"Refund Amount: ₹ {float(sale_row['total_amount']):.2f}\n"
+                    f"Inventory stock restored for returned items."
+                )
+                win.destroy()
+                self.load_all_backend_data()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to process return: {e}")
+            finally:
+                if cursor:
+                    cursor.close()
+                if conn and conn.is_connected():
+                    conn.close()
 
         tk.Button(form, text="Confirm Return & Issue Refund", font=("Segoe UI", 10, "bold"), bg=self.COLOR_PRIMARY, fg="#ffffff", relief=tk.FLAT, cursor="hand2", command=process_return).pack(fill=tk.X, ipady=5)
 
@@ -664,7 +698,7 @@ class SnapKartModernDashboard(tk.Tk):
         settings_spec = [
             ("Store Brand Name:", "store_name", "SnapKart"),
             ("Default Currency:", "currency", "INR (₹)"),
-            ("GST Rate (%):", "gst_rate", "5% Inclusive"),
+            ("GST Rate (%):", "gst_rate", "5% Added (CGST 2.5% + SGST 2.5%)"),
             ("Low Stock Threshold:", "low_stock", "25 Units"),
             ("Receipt Storage Directory:", "receipt_dir", "receipts/"),
             ("POS Machine Terminal ID:", "pos_term", "Terminal-01 (Active)"),
@@ -776,7 +810,7 @@ class SnapKartModernDashboard(tk.Tk):
             ("Catalog Items:", f"{prod_count:,} Active Products"),
             ("Python Runtime:", f"Python {sys.version.split()[0]} (Virtual Env Active)"),
             ("Receipts Folder:", "receipts/ (Read/Write Active)"),
-            ("POS Software:", "SnapKart Retail Suite v2.4.0"),
+            ("Application:", "SnapKart v2.4.0"),
         ]
 
         for k, v in specs:

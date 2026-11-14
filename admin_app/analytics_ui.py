@@ -107,12 +107,17 @@ class AnalyticsFrame(ttk.Frame):
             return
 
         try:
-            # 1. Read inventory table using Pandas
-            df = pd.read_sql("SELECT item_id, name, category, price, stock_quantity FROM inventory", conn)
+            # 1. Read inventory table using DB cursor
+            cursor = conn.cursor()
+            cursor.execute("SELECT item_id, name, category, price, stock_quantity FROM inventory")
+            rows = cursor.fetchall()
+            cursor.close()
 
-            if df.empty:
+            if not rows:
                 messagebox.showwarning("No Data", "No inventory data found to analyze.")
                 return
+
+            df = pd.DataFrame(rows, columns=["item_id", "name", "category", "price", "stock_quantity"])
 
             # 2. Calculate summary metrics using NumPy and Pandas
             total_items = len(df)

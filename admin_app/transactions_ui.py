@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -222,7 +223,7 @@ class TransactionsFrame(ttk.Frame):
                 SELECT COALESCE(si.product_name, i.name, 'Removed product') AS name,
                        si.quantity, si.unit_price, si.subtotal
                 FROM sale_items si
-                JOIN inventory i ON si.item_id = i.item_id
+                LEFT JOIN inventory i ON si.item_id = i.item_id
                 WHERE si.sale_id = %s;
             """, (self.selected_sale_id,))
             items = cursor.fetchall()
@@ -261,7 +262,7 @@ class TransactionsFrame(ttk.Frame):
                 SELECT COALESCE(si.product_name, i.name, 'Removed product') AS name,
                        si.quantity, si.unit_price
                 FROM sale_items si
-                JOIN inventory i ON si.item_id = i.item_id
+                LEFT JOIN inventory i ON si.item_id = i.item_id
                 WHERE si.sale_id = %s;
             """, (self.selected_sale_id,))
             rows = cursor.fetchall()

@@ -197,7 +197,7 @@ class BillingPOSFrame(ttk.Frame):
         r_sum.pack(fill=tk.X, padx=12, pady=2)
         self.lbl_subtotal = tk.Label(r_sum, text="Subtotal: ₹ 0.00", font=("Segoe UI", 9), bg="#f1f5f9")
         self.lbl_subtotal.pack(side=tk.LEFT)
-        self.lbl_tax = tk.Label(r_sum, text="GST (5% incl): ₹ 0.00", font=("Segoe UI", 9), bg="#f1f5f9", fg="#64748b")
+        self.lbl_tax = tk.Label(r_sum, text="GST (5% added): ₹ 0.00", font=("Segoe UI", 9), bg="#f1f5f9", fg="#64748b")
         self.lbl_tax.pack(side=tk.RIGHT)
 
         # Row: Discount & Grand Total
@@ -379,9 +379,8 @@ class BillingPOSFrame(ttk.Frame):
             totals = calculate_sale_totals(self.bill_items, discount=discount)
         except SaleError:
             totals = calculate_sale_totals(self.bill_items)
-        gst = float(totals.subtotal * 5 / 105)
         self.lbl_subtotal.config(text=f"Subtotal: ₹ {totals.subtotal:.2f}")
-        self.lbl_tax.config(text=f"GST (5% incl): ₹ {gst:.2f}")
+        self.lbl_tax.config(text=f"GST (5% added): ₹ {totals.tax:.2f}")
         self.lbl_grand_total.config(text=f"Grand Total: ₹ {totals.total:.2f}")
 
     # --- Sale Execution & Invoice Generation ---
@@ -424,7 +423,7 @@ class BillingPOSFrame(ttk.Frame):
                 total_amount=totals.total,
                 discount_amount=totals.discount,
                 customer_name=cust_name,
-                customer_address="SnapKart In-Store Retail Counter",
+                customer_address="Store Counter",
                 payment_method=pay_mode
             )
 
