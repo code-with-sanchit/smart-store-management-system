@@ -1,0 +1,7 @@
+{
+  "setting_key": "max_cart_quantity",
+  "setting_value": "50",
+  "description": "Maximum units allowed per product item in a single cart",
+  "database_table": "system_settings",
+  "synced_to_mysql": true
+}
