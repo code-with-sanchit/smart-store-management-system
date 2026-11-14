@@ -1,0 +1,11 @@
+{
+  "category_slug": "tea_coffee_beverages",
+  "category_name": "Tea, Coffee & Beverages",
+  "description": "Tea leaves, ground coffee, and juice catalog specs",
+  "gst_rate": 0.05,
+  "hsn_prefix": "2106",
+  "safety_stock_threshold": 25,
+  "reorder_batch_size": 50,
+  "perishable": false,
+  "active": true
+}
