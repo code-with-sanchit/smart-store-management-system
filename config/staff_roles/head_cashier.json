@@ -1,0 +1,8 @@
+{
+  "role_id": "head_cashier",
+  "title": "Head Cashier & POS Supervisor",
+  "description": "Cash drawer balancing, shift audits, and void overrides",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
