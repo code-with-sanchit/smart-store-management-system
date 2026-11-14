@@ -1,0 +1,8 @@
+{
+  "role_id": "customer_support",
+  "title": "Customer Support & CRM Executive",
+  "description": "Returns processing, complaint resolution, and loyalty support",
+  "database_table": "staff",
+  "department": "Store Operations",
+  "status": "active"
+}
