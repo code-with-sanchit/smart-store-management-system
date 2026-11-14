@@ -9,7 +9,8 @@ class SaleTotalTests(unittest.TestCase):
         items = {1: {"name": "Milk", "price": "49.995", "qty": 2}}
         totals = calculate_sale_totals(items, delivery_fee="20", discount="5.50")
         self.assertEqual(totals.subtotal, Decimal("100.00"))
-        self.assertEqual(totals.total, Decimal("114.50"))
+        self.assertEqual(totals.tax, Decimal("5.00"))
+        self.assertEqual(totals.total, Decimal("119.50"))
 
     def test_discount_cannot_exceed_subtotal(self):
         items = {1: {"name": "Milk", "price": 50, "qty": 1}}

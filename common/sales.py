@@ -8,6 +8,7 @@ from typing import Mapping
 
 
 MONEY_PLACES = Decimal("0.01")
+GST_RATE = Decimal("0.05")
 
 
 class SaleError(ValueError):
@@ -17,6 +18,7 @@ class SaleError(ValueError):
 @dataclass(frozen=True)
 class SaleTotals:
     subtotal: Decimal
+    tax: Decimal
     delivery_fee: Decimal
     discount: Decimal
     total: Decimal
@@ -28,7 +30,7 @@ def as_money(value: object) -> Decimal:
 
 
 def calculate_sale_totals(items: Mapping[object, Mapping[str, object]], delivery_fee=0, discount=0) -> SaleTotals:
-    """Calculate an invoice total and reject invalid discounts before a database write."""
+    """Calculate an invoice total with 5% GST added to the final price."""
     subtotal = sum((as_money(row["price"]) * int(row["qty"]) for row in items.values()), Decimal("0.00"))
     fee = as_money(delivery_fee)
     reduction = as_money(discount)
@@ -38,7 +40,11 @@ def calculate_sale_totals(items: Mapping[object, Mapping[str, object]], delivery
         raise SaleError("Delivery fees and discounts cannot be negative.")
     if reduction > subtotal:
         raise SaleError("The discount cannot be greater than the product subtotal.")
-    return SaleTotals(subtotal, fee, reduction, subtotal + fee - reduction)
+
+    # 5% GST explicitly added to the final price
+    tax = (subtotal * GST_RATE).quantize(MONEY_PLACES, rounding=ROUND_HALF_UP)
+    total = subtotal + tax + fee - reduction
+    return SaleTotals(subtotal, tax, fee, reduction, total)
 
 
 def record_sale(connection, items, totals: SaleTotals, payment_method: str, customer_id=None, order_channel="store") -> int:
