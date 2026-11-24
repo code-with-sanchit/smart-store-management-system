@@ -6,7 +6,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 
 import matplotlib
-matplotlib.use("Agg")  # Must be set before importing pyplot
+matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 

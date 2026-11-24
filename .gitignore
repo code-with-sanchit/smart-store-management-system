@@ -5,12 +5,16 @@ env/
 
 # Python cache
 __pycache__/
+.pytest_cache/
 *.env
 !.env.example
 .env
 *.py[cod]
 *$py.class
 *.pyo
+
+# Database backups & local dumps
+database/backups/
 
 # IDE files
 .idea/
